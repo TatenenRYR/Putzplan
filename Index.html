@@ -27,14 +27,18 @@
       padding: 0;
     }
     li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 0.5rem;
       border-bottom: 1px solid #ddd;
     }
     .sign {
-      margin-top: 1rem;
       font-style: italic;
       color: #999;
       cursor: pointer;
+      margin-left: 1rem;
+      white-space: nowrap;
     }
     .sign.filled {
       color: black;
@@ -43,48 +47,40 @@
   </style>
 </head>
 <body>
-  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>
-  <div class="section">
+  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>  <div class="section">
     <h2>Frühschicht</h2>
     <ul>
-      <li>Fritteusen filtern/Fett wechseln (nach Fettliste)</li>
-      <li>To Do Liste abarbeiten (vom Vortag)</li>
-      <li>Ware wegräumen (alt vor neu!)</li>
+      <li>Fritteusen filtern/Fett wechseln (nach Fettliste)<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>To Do Liste abarbeiten (vom Vortag)<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Ware wegräumen (alt vor neu!)<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
     </ul>
-  </div>
-  <div class="section">
+  </div>  <div class="section">
     <h2>Tagschicht</h2>
     <ul>
-      <li>Nachmittagsliste abarbeiten</li>
-      <li>Temperaturliste ausfüllen (15:00–17:00 Uhr)</li>
-      <li>Außer Haus Station reinigen, Wasser tauschen</li>
-      <li>Bain Marie Burger & Hauptstation reinigen, Wasser tauschen</li>
-      <li>Alle Wandfliesen und weiße Mauer reinigen</li>
+      <li>Nachmittagsliste abarbeiten<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Temperaturliste ausfüllen (15:00–17:00 Uhr)<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Außer Haus Station reinigen, Wasser tauschen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Bain Marie Burger & Hauptstation reinigen, Wasser tauschen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Alle Wandfliesen und weiße Mauer reinigen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
     </ul>
-  </div>
-  <div class="section">
+  </div>  <div class="section">
     <h2>Spätschicht</h2>
     <ul>
-      <li>Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken</li>
-      <li>Schneidbretter abräumen, abkochen</li>
-      <li>Auffülllisten schreiben für nächsten Tag</li>
-      <li>Unter der Bratplatte reinigen</li>
-      <li>Unter der Schnitzelfritteuse reinigen</li>
-      <li>Küche schrubben, abziehen, Bodenabläufe reinigen</li>
-      <li>Papiertonne rausstellen</li>
+      <li>Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Schneidbretter abräumen, abkochen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Auffülllisten schreiben für nächsten Tag<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Unter der Bratplatte reinigen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Unter der Schnitzelfritteuse reinigen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Küche schrubben, abziehen, Bodenabläufe reinigen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
+      <li>Papiertonne rausstellen<span class="sign" onclick="enterSignature(this)">Unterschreiben</span></li>
     </ul>
-  </div>
-  <div class="section">
-    <h2>Unterschrift</h2>
-    <div id="signature" class="sign" onclick="enterSignature()">Hier klicken zum Unterschreiben</div>
   </div>  <script>
-    function enterSignature() {
+    function enterSignature(element) {
       const name = prompt("Bitte deinen Namen eingeben zum Unterschreiben:");
-      const signElement = document.getElementById("signature");
       if (name) {
         const now = new Date().toLocaleString("de-DE");
-        signElement.textContent = name + " am " + now;
-        signElement.classList.add("filled");
+        element.textContent = name + " am " + now;
+        element.classList.add("filled");
       }
     }
   </script></body>
