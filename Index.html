@@ -4,103 +4,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Putzplan App</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      background-color: #f0f0f0;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .date-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .date-display {
-      font-weight: bold;
-    }
-    .section {
-      background: white;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem;
-      border-bottom: 1px solid #ddd;
-    }
-    .sign {
-      font-style: italic;
-      color: #999;
-      cursor: pointer;
-      margin-left: 1rem;
-      white-space: nowrap;
-    }
-    .sign.filled {
-      color: black;
-      font-style: normal;
-    }
-    .btn {
-      display: block;
-      margin: 1rem auto;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .nav-btn {
-      background-color: #007bff;
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .admin-link {
-      text-align: center;
-      margin-top: 1rem;
-    }
-    .admin-link a {
-      color: #007bff;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    #adminModal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 1rem;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 500px;
-    }
-    .modal-content textarea {
-      width: 100%;
-      height: 100px;
-    }
+    body { font-family: sans-serif; padding: 1rem; background-color: #f0f0f0; }
+    h1, h2 { text-align: center; }
+    .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .date-display { font-weight: bold; }
+    .section { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    ul { list-style: none; padding: 0; }
+    li { padding: 0.5rem; border-bottom: 1px solid #ddd; }
+    .sign { font-style: italic; color: #999; margin-left: 1rem; white-space: nowrap; }
+    .btn { display: block; margin: 1rem auto; padding: 0.5rem 1rem; font-size: 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .nav-btn { background-color: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
+    .admin-link { text-align: center; margin-top: 1rem; }
+    .admin-link a { color: #007bff; text-decoration: underline; cursor: pointer; }
+    #adminModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 1rem; border-radius: 10px; width: 90%; max-width: 500px; }
+    .modal-content textarea { width: 100%; height: 100px; }
   </style>
 </head>
 <body>
-  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>  <div class="date-nav">
+  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>
+  <div class="date-nav">
     <button class="nav-btn" onclick="changeDay(-1)">&lt; vorheriger Tag</button>
     <div class="date-display" id="currentDate"></div>
     <button class="nav-btn" onclick="changeDay(1)">nächster Tag &gt;</button>
@@ -131,119 +54,75 @@
     </div>
   </div>  <script>
     let offset = 0;
-    let plan = JSON.parse(localStorage.getItem("putzplan_admin_tasks") || '{}');
-    if (!plan.frueh || !plan.tag || !plan.spaet) {
-      plan = {
-        frueh: [
-          "Fritteusen filtern/Fett wechseln (nach Fettliste)",
-          "To Do Liste abarbeiten (vom Vortag)",
-          "Ware wegräumen (alt vor neu!)"
-        ],
-        tag: [
-          "Nachmittagsliste abarbeiten",
-          "Temperaturliste ausfüllen (15:00–17:00 Uhr)",
-          "Außer Haus Station reinigen, Wasser tauschen",
-          "Bain Marie Burger & Hauptstation reinigen, Wasser tauschen",
-          "Alle Wandfliesen und weiße Mauer reinigen"
-        ],
-        spaet: [
-          "Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken",
-          "Schneidbretter abräumen, abkochen",
-          "Auffülllisten schreiben für nächsten Tag",
-          "Unter der Bratplatte reinigen",
-          "Unter der Schnitzelfritteuse reinigen",
-          "Küche schrubben, abziehen, Bodenabläufe reinigen",
-          "Papiertonne rausstellen"
-        ]
-      };
+    let plan = JSON.parse(localStorage.getItem("putzplan_admin_tasks") || 'null');
+    if (!plan) {
+      plan = { frueh: ["Fritteusen filtern/Fett wechseln (nach Fettliste)", "To Do Liste abarbeiten (vom Vortag)", "Ware wegräumen (alt vor neu!)"],
+               tag: ["Nachmittagsliste abarbeiten", "Temperaturliste ausfüllen (15:00–17:00 Uhr)", "Außer Haus Station reinigen, Wasser tauschen", "Bain Marie Burger & Hauptstation reinigen, Wasser tauschen", "Alle Wandfliesen und weiße Mauer reinigen"],
+               spaet: ["Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken", "Schneidbretter abräumen, abkochen", "Auffülllisten schreiben für nächsten Tag", "Unter der Bratplatte reinigen", "Unter der Schnitzelfritteuse reinigen", "Küche schrubben, abziehen, Bodenabläufe reinigen", "Papiertonne rausstellen"] };
     }
 
-    function formatDate(d) {
-      return d.toLocaleDateString('de-DE');
-    }
-
-    function getCurrentDateKey() {
-      const d = new Date();
-      d.setDate(d.getDate() + offset);
-      return formatDate(d);
-    }
+    function formatDate(d) { return d.toLocaleDateString('de-DE'); }
+    function getCurrentDateKey() { const d = new Date(); d.setDate(d.getDate() + offset); return formatDate(d); }
 
     function renderPlan() {
       const dateKey = getCurrentDateKey();
       document.getElementById('currentDate').textContent = dateKey;
-
-      const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
+      const history = JSON.parse(localStorage.getItem("putzplan_history") || '{}');
       const saved = history[dateKey] || {};
       const isFinal = Object.keys(saved).length > 0;
 
-      ['frueh', 'tag', 'spaet'].forEach(section => {
-        const ul = document.getElementById(section);
-        ul.innerHTML = '';
+      ['frueh','tag','spaet'].forEach(section => {
+        const ul = document.getElementById(section); ul.innerHTML = '';
         plan[section].forEach(aufgabe => {
           const li = document.createElement('li');
-          if (isFinal && saved[aufgabe]) {
-            li.innerHTML = `${aufgabe}<span class="sign filled">${saved[aufgabe]}</span>`;
-          } else if (isFinal && !saved[aufgabe]) {
-            li.innerHTML = `${aufgabe}<span class="sign">(nicht unterschrieben)</span>`;
+          if (isFinal) {
+            const signer = saved[aufgabe] || '(nicht unterschrieben)';
+            li.textContent = `${aufgabe}: ${signer}`;
           } else {
             li.innerHTML = `${aufgabe}<span class="sign" data-task="${aufgabe}" onclick="enterSignature(this)">Unterschreiben</span>`;
           }
           ul.appendChild(li);
         });
       });
-
-      document.getElementById("submitBtn").style.display = isFinal ? "none" : "block";
+      document.getElementById('submitBtn').style.display = isFinal ? 'none' : 'block';
     }
 
-    function enterSignature(element) {
+    function enterSignature(el) {
       const name = prompt("Bitte deinen Namen eingeben zum Unterschreiben:");
-      if (name) {
-        const task = element.getAttribute("data-task");
-        element.textContent = name;
-        element.classList.add("filled");
-        element.setAttribute("data-signed", name);
-      }
+      if (!name) return;
+      el.textContent = name;
+      el.classList.add('filled');
+      el.setAttribute('data-signed', name);
     }
 
     function submitPlan() {
       const date = getCurrentDateKey();
       const result = {};
-      const allSigns = document.querySelectorAll('.sign.filled');
-      allSigns.forEach(el => {
-        const task = el.closest('li').childNodes[0].textContent.trim();
-        const signer = el.getAttribute("data-signed") || el.textContent;
-        result[task] = signer;
+      document.querySelectorAll('.sign.filled').forEach(el => {
+        const task = el.getAttribute('data-task');
+        result[task] = el.getAttribute('data-signed') || el.textContent;
       });
-      const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
+      const history = JSON.parse(localStorage.getItem("putzplan_history") || '{}');
       history[date] = result;
       localStorage.setItem("putzplan_history", JSON.stringify(history));
-      alert("Plan gespeichert.");
-      renderPlan();
+      alert('Plan gespeichert.'); renderPlan();
     }
 
-    function changeDay(n) {
-      offset += n;
-      renderPlan();
-    }
+    function changeDay(n) { offset += n; renderPlan(); }
 
     function openAdmin() {
-      document.getElementById("adminModal").style.display = "flex";
-      document.getElementById("fruehEdit").value = plan.frueh.join("\n");
-      document.getElementById("tagEdit").value = plan.tag.join("\n");
-      document.getElementById("spaetEdit").value = plan.spaet.join("\n");
+      document.getElementById('adminModal').style.display = 'flex';
+      document.getElementById('fruehEdit').value = plan.frueh.join('\n');
+      document.getElementById('tagEdit').value = plan.tag.join('\n');
+      document.getElementById('spaetEdit').value = plan.spaet.join('\n');
     }
-
-    function closeAdmin() {
-      document.getElementById("adminModal").style.display = "none";
-    }
-
+    function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
     function saveAdmin() {
-      plan.frueh = document.getElementById("fruehEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
-      plan.tag = document.getElementById("tagEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
-      plan.spaet = document.getElementById("spaetEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
+      plan.frueh = document.getElementById('fruehEdit').value.split('\n').map(t=>t.trim()).filter(Boolean);
+      plan.tag = document.getElementById('tagEdit').value.split('\n').map(t=>t.trim()).filter(Boolean);
+      plan.spaet = document.getElementById('spaetEdit').value.split('\n').map(t=>t.trim()).filter(Boolean);
       localStorage.setItem("putzplan_admin_tasks", JSON.stringify(plan));
-      closeAdmin();
-      renderPlan();
+      closeAdmin(); renderPlan();
     }
 
     renderPlan();
