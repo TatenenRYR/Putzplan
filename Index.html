@@ -12,6 +12,7 @@
     ul { list-style: none; padding: 0; }
     li { padding: 0.5rem; border-bottom: 1px solid #ddd; }
     .sign { font-style: italic; color: #999; margin-left: 1rem; white-space: nowrap; cursor: pointer; }
+    .sign.filled { color: #4caf50; font-style: normal; }
     .btn { display: block; margin: 1rem auto; padding: 0.5rem 1rem; font-size: 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
     .nav-btn { background-color: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
     .admin-link { text-align: center; margin-top: 1rem; }
@@ -106,6 +107,64 @@
       });
     }
 
+    function getDayOffsetDate() {
+      const today = new Date();
+      today.setDate(today.getDate() + offset);
+      return today;
+    }
+
+    function updateDateDisplay() {
+      const date = getDayOffsetDate();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById("currentDate").textContent = date.toLocaleDateString("de-DE", options);
+    }
+
+    function changeDay(val) {
+      offset += val;
+      renderPlan();
+    }
+
+    function renderPlan() {
+      updateDateDisplay();
+      const dayKey = "plan_" + getDayOffsetDate().toISOString().slice(0, 10);
+      const data = JSON.parse(localStorage.getItem(dayKey) || '{}');
+
+      ["frueh", "tag", "spaet"].forEach(id => {
+        const container = document.getElementById(id);
+        container.innerHTML = '';
+        const tasks = (data[id] || "").split("\n");
+        tasks.forEach((task, i) => {
+          const li = document.createElement("li");
+          const sign = document.createElement("span");
+          sign.className = "sign";
+          const sigKey = `${id}_sig_${i}`;
+          const sigVal = data[sigKey] || "";
+          if (sigVal) {
+            sign.classList.add("filled");
+            sign.textContent = ` - ${sigVal}`;
+          } else {
+            sign.textContent = " - klicken zum Unterschreiben";
+            sign.onclick = () => {
+              const name = prompt("Unterschrift (Name):");
+              if (name) {
+                data[sigKey] = name;
+                localStorage.setItem(dayKey, JSON.stringify(data));
+                renderPlan();
+              }
+            };
+          }
+          li.textContent = task;
+          li.appendChild(sign);
+          container.appendChild(li);
+        });
+      });
+      updateProgress();
+    }
+
+    function submitPlan() {
+      alert("Plan gespeichert.");
+    }
+
     function updateProgress() {
       const total = document.querySelectorAll('.sign').length;
       const signed = document.querySelectorAll('.sign.filled').length;
@@ -113,8 +172,62 @@
       document.getElementById('progressFill').style.width = percent + '%';
     }
 
-    // Bestehender JS-Code zum Laden/Speichern usw. wird hier weitergeführt
-    // Am Ende von renderPlan einfügen:
-    // updateProgress();
+    function openAdmin() {
+      document.getElementById("adminModal").style.display = "flex";
+      loadAdmin();
+    }
+
+    function closeAdmin() {
+      document.getElementById("adminModal").style.display = "none";
+    }
+
+    function loadAdmin() {
+      document.getElementById("adminDayDisplay").textContent = "Tag " + adminDay;
+      const key = "admin_" + adminDay;
+      const stored = JSON.parse(localStorage.getItem(key) || '{}');
+      document.getElementById("fruehEdit").value = stored.frueh || "";
+      document.getElementById("tagEdit").value = stored.tag || "";
+      document.getElementById("spaetEdit").value = stored.spaet || "";
+    }
+
+    function saveAdmin() {
+      const key = "admin_" + adminDay;
+      const data = {
+        frueh: document.getElementById("fruehEdit").value,
+        tag: document.getElementById("tagEdit").value,
+        spaet: document.getElementById("spaetEdit").value
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+      closeAdmin();
+    }
+
+    function switchAdminDay(val) {
+      adminDay += val;
+      if (adminDay < 1) adminDay = 1;
+      if (adminDay > 31) adminDay = 31;
+      loadAdmin();
+    }
+
+    function applyAdminTasks() {
+      const date = getDayOffsetDate();
+      const day = date.getDate();
+      const key = "admin_" + day;
+      const tasks = JSON.parse(localStorage.getItem(key) || '{}');
+      const dayKey = "plan_" + date.toISOString().slice(0, 10);
+      const existing = JSON.parse(localStorage.getItem(dayKey) || '{}');
+
+      ["frueh", "tag", "spaet"].forEach(id => {
+        if (!existing[id] && tasks[id]) {
+          existing[id] = tasks[id];
+        }
+      });
+      localStorage.setItem(dayKey, JSON.stringify(existing));
+    }
+
+    window.onload = () => {
+      changeLanguage();
+      applyAdminTasks();
+      renderPlan();
+    };
   </script></body>
 </html>
