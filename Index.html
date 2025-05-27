@@ -129,15 +129,18 @@
       document.getElementById('currentDate').textContent = dateKey;
 
       const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
-      const saved = history[dateKey];
+      const saved = history[dateKey] || {};
+      const isFinal = Object.keys(saved).length > 0;
 
       ['frueh', 'tag', 'spaet'].forEach(section => {
         const ul = document.getElementById(section);
         ul.innerHTML = '';
         plan[section].forEach(aufgabe => {
           const li = document.createElement('li');
-          if (saved && saved[aufgabe]) {
+          if (isFinal && saved[aufgabe]) {
             li.innerHTML = `${aufgabe}<span class="sign filled">${saved[aufgabe]}</span>`;
+          } else if (isFinal && !saved[aufgabe]) {
+            li.innerHTML = `${aufgabe}<span class="sign">(nicht unterschrieben)</span>`;
           } else {
             li.innerHTML = `${aufgabe}<span class="sign" data-task="${aufgabe}" onclick="enterSignature(this)">Unterschreiben</span>`;
           }
@@ -145,7 +148,7 @@
         });
       });
 
-      document.getElementById("submitBtn").style.display = saved ? "none" : "block";
+      document.getElementById("submitBtn").style.display = isFinal ? "none" : "block";
     }
 
     function enterSignature(element) {
@@ -161,9 +164,9 @@
     function submitPlan() {
       const date = getCurrentDateKey();
       const result = {};
-      const signed = document.querySelectorAll('.sign.filled');
-      signed.forEach(el => {
-        const task = el.previousSibling.textContent.trim();
+      const allSigns = document.querySelectorAll('.sign.filled');
+      allSigns.forEach(el => {
+        const task = el.closest('li').childNodes[0].textContent.trim();
         const signer = el.getAttribute("data-signed") || el.textContent;
         result[task] = signer;
       });
