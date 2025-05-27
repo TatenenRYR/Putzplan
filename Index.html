@@ -12,9 +12,13 @@
     h1, h2 {
       text-align: center;
     }
-    .date {
-      text-align: center;
+    .date-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 1rem;
+    }
+    .date-display {
       font-weight: bold;
     }
     .section {
@@ -57,19 +61,22 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    .admin-link, .history-link {
-      text-align: center;
-      margin-top: 1rem;
-    }
-    .admin-link a, .history-link a {
-      color: #007bff;
-      text-decoration: none;
+    .nav-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>
-  <div class="date" id="currentDate"></div>  <div class="section">
+  <h1>Putzplan - Schnitzelwelt Neuenhaus</h1>  <div class="date-nav">
+    <button class="nav-btn" onclick="changeDay(-1)">&lt; vorheriger Tag</button>
+    <div class="date-display" id="currentDate"></div>
+    <button class="nav-btn" onclick="changeDay(1)">nächster Tag &gt;</button>
+  </div>  <div class="section">
     <h2>Frühschicht</h2>
     <ul id="frueh"></ul>
   </div>  <div class="section">
@@ -78,14 +85,9 @@
   </div>  <div class="section">
     <h2>Spätschicht</h2>
     <ul id="spaet"></ul>
-  </div><button class="btn" onclick="submitPlan()">Plan abschicken</button>
+  </div><button class="btn" id="submitBtn" onclick="submitPlan()">Plan abschicken</button>
 
-  <div class="history-link">
-    <a href="#" onclick="showHistory()">Abgeschickte Pläne ansehen</a>
-  </div>
-  <div class="admin-link">
-    <a href="#" onclick="showAdminLogin()">Administratorbereich</a>
-  </div>  <script>
+  <script>
     const plan = {
       frueh: [
         "Fritteusen filtern/Fett wechseln (nach Fettliste)",
@@ -110,23 +112,49 @@
       ]
     };
 
+    let offset = 0;
+
+    function formatDate(d) {
+      return d.toLocaleDateString('de-DE');
+    }
+
+    function getCurrentDateKey() {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return formatDate(d);
+    }
+
     function renderPlan() {
-      document.getElementById('currentDate').textContent = new Date().toLocaleDateString('de-DE');
+      const dateKey = getCurrentDateKey();
+      document.getElementById('currentDate').textContent = dateKey;
+
+      const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
+      const saved = history[dateKey];
+
       ['frueh', 'tag', 'spaet'].forEach(section => {
         const ul = document.getElementById(section);
+        ul.innerHTML = '';
         plan[section].forEach(aufgabe => {
           const li = document.createElement('li');
-          li.innerHTML = `${aufgabe}<span class="sign" onclick="enterSignature(this)">Unterschreiben</span>`;
+          if (saved) {
+            const found = saved.find(l => l.startsWith(aufgabe));
+            li.innerHTML = `${found || aufgabe}`;
+          } else {
+            li.innerHTML = `${aufgabe}<span class="sign" data-task="${aufgabe}" onclick="enterSignature(this)">Unterschreiben</span>`;
+          }
           ul.appendChild(li);
         });
       });
+
+      document.getElementById("submitBtn").style.display = saved ? "none" : "block";
     }
 
     function enterSignature(element) {
       const name = prompt("Bitte deinen Namen eingeben zum Unterschreiben:");
       if (name) {
         const now = new Date().toLocaleString("de-DE");
-        element.textContent = name + " am " + now;
+        const aufgabe = element.getAttribute("data-task");
+        element.textContent = `${aufgabe}: ${name} am ${now}`;
         element.classList.add("filled");
       }
     }
@@ -138,40 +166,18 @@
         alert("Bitte alle Aufgaben unterschreiben, bevor du den Plan abschickst.");
         return;
       }
-      const date = new Date().toLocaleDateString("de-DE");
+      const date = getCurrentDateKey();
       const data = Array.from(signatures).map(s => s.textContent);
-      const history = JSON.parse(localStorage.getItem("putzplan_history") || "[]");
-      history.push({ date, data });
+      const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
+      history[date] = data;
       localStorage.setItem("putzplan_history", JSON.stringify(history));
       alert("Plan erfolgreich gespeichert.");
-      location.reload();
+      renderPlan();
     }
 
-    function showHistory() {
-      const history = JSON.parse(localStorage.getItem("putzplan_history") || "[]");
-      let out = "<h2>Plan-Historie</h2><ul>";
-      history.forEach(entry => {
-        out += `<li><strong>${entry.date}</strong><ul>` + entry.data.map(d => `<li>${d}</li>`).join('') + "</ul></li>";
-      });
-      out += "</ul><button onclick='location.reload()'>Zurück</button>";
-      document.body.innerHTML = out;
-    }
-
-    function showAdminLogin() {
-      const pass = prompt("Admin-Passwort eingeben:");
-      if (pass === "admin") {
-        showAdminPage();
-      } else {
-        alert("Falsches Passwort.");
-      }
-    }
-
-    function showAdminPage() {
-      document.body.innerHTML = `
-        <h2>Administratorbereich</h2>
-        <p>Hier kannst du Aufgaben für jeden Tag im Monat definieren. (Funktion kommt bald)</p>
-        <button onclick='location.reload()'>Zurück</button>
-      `;
+    function changeDay(n) {
+      offset += n;
+      renderPlan();
     }
 
     renderPlan();
