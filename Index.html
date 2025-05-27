@@ -136,9 +136,8 @@
         ul.innerHTML = '';
         plan[section].forEach(aufgabe => {
           const li = document.createElement('li');
-          if (saved) {
-            const found = saved.find(l => l.startsWith(aufgabe));
-            li.innerHTML = `${found || aufgabe}`;
+          if (saved && saved[aufgabe]) {
+            li.innerHTML = `${aufgabe}<span class="sign filled">${saved[aufgabe]}</span>`;
           } else {
             li.innerHTML = `${aufgabe}<span class="sign" data-task="${aufgabe}" onclick="enterSignature(this)">Unterschreiben</span>`;
           }
@@ -152,26 +151,26 @@
     function enterSignature(element) {
       const name = prompt("Bitte deinen Namen eingeben zum Unterschreiben:");
       if (name) {
-        const now = new Date().toLocaleString("de-DE");
-        const aufgabe = element.getAttribute("data-task");
-        element.textContent = `${aufgabe}: ${name} am ${now}`;
+        const task = element.getAttribute("data-task");
+        element.textContent = name;
         element.classList.add("filled");
+        element.setAttribute("data-signed", name);
       }
     }
 
     function submitPlan() {
-      const signatures = document.querySelectorAll('.sign');
-      const allSigned = Array.from(signatures).every(s => s.classList.contains('filled'));
-      if (!allSigned) {
-        alert("Bitte alle Aufgaben unterschreiben, bevor du den Plan abschickst.");
-        return;
-      }
       const date = getCurrentDateKey();
-      const data = Array.from(signatures).map(s => s.textContent);
+      const result = {};
+      const signed = document.querySelectorAll('.sign.filled');
+      signed.forEach(el => {
+        const task = el.previousSibling.textContent.trim();
+        const signer = el.getAttribute("data-signed") || el.textContent;
+        result[task] = signer;
+      });
       const history = JSON.parse(localStorage.getItem("putzplan_history") || "{}");
-      history[date] = data;
+      history[date] = result;
       localStorage.setItem("putzplan_history", JSON.stringify(history));
-      alert("Plan erfolgreich gespeichert.");
+      alert("Plan gespeichert.");
       renderPlan();
     }
 
