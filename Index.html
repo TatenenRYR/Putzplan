@@ -69,6 +69,34 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    .admin-link {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .admin-link a {
+      color: #007bff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    #adminModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .modal-content textarea {
+      width: 100%;
+      height: 100px;
+    }
   </style>
 </head>
 <body>
@@ -87,32 +115,48 @@
     <ul id="spaet"></ul>
   </div><button class="btn" id="submitBtn" onclick="submitPlan()">Plan abschicken</button>
 
-  <script>
-    const plan = {
-      frueh: [
-        "Fritteusen filtern/Fett wechseln (nach Fettliste)",
-        "To Do Liste abarbeiten (vom Vortag)",
-        "Ware wegräumen (alt vor neu!)"
-      ],
-      tag: [
-        "Nachmittagsliste abarbeiten",
-        "Temperaturliste ausfüllen (15:00–17:00 Uhr)",
-        "Außer Haus Station reinigen, Wasser tauschen",
-        "Bain Marie Burger & Hauptstation reinigen, Wasser tauschen",
-        "Alle Wandfliesen und weiße Mauer reinigen"
-      ],
-      spaet: [
-        "Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken",
-        "Schneidbretter abräumen, abkochen",
-        "Auffülllisten schreiben für nächsten Tag",
-        "Unter der Bratplatte reinigen",
-        "Unter der Schnitzelfritteuse reinigen",
-        "Küche schrubben, abziehen, Bodenabläufe reinigen",
-        "Papiertonne rausstellen"
-      ]
-    };
-
+  <div class="admin-link">
+    <a onclick="openAdmin()">Administrator: Aufgaben bearbeiten</a>
+  </div>  <div id="adminModal">
+    <div class="modal-content">
+      <h2>Admin: Aufgaben bearbeiten</h2>
+      <p><strong>Frühschicht</strong></p>
+      <textarea id="fruehEdit"></textarea>
+      <p><strong>Tagschicht</strong></p>
+      <textarea id="tagEdit"></textarea>
+      <p><strong>Spätschicht</strong></p>
+      <textarea id="spaetEdit"></textarea>
+      <button class="btn" onclick="saveAdmin()">Speichern</button>
+      <button class="btn" style="background:#999" onclick="closeAdmin()">Abbrechen</button>
+    </div>
+  </div>  <script>
     let offset = 0;
+    let plan = JSON.parse(localStorage.getItem("putzplan_admin_tasks") || '{}');
+    if (!plan.frueh || !plan.tag || !plan.spaet) {
+      plan = {
+        frueh: [
+          "Fritteusen filtern/Fett wechseln (nach Fettliste)",
+          "To Do Liste abarbeiten (vom Vortag)",
+          "Ware wegräumen (alt vor neu!)"
+        ],
+        tag: [
+          "Nachmittagsliste abarbeiten",
+          "Temperaturliste ausfüllen (15:00–17:00 Uhr)",
+          "Außer Haus Station reinigen, Wasser tauschen",
+          "Bain Marie Burger & Hauptstation reinigen, Wasser tauschen",
+          "Alle Wandfliesen und weiße Mauer reinigen"
+        ],
+        spaet: [
+          "Saucen / Bainmarie: Wasser ablassen, reinigen, entkalken",
+          "Schneidbretter abräumen, abkochen",
+          "Auffülllisten schreiben für nächsten Tag",
+          "Unter der Bratplatte reinigen",
+          "Unter der Schnitzelfritteuse reinigen",
+          "Küche schrubben, abziehen, Bodenabläufe reinigen",
+          "Papiertonne rausstellen"
+        ]
+      };
+    }
 
     function formatDate(d) {
       return d.toLocaleDateString('de-DE');
@@ -179,6 +223,26 @@
 
     function changeDay(n) {
       offset += n;
+      renderPlan();
+    }
+
+    function openAdmin() {
+      document.getElementById("adminModal").style.display = "flex";
+      document.getElementById("fruehEdit").value = plan.frueh.join("\n");
+      document.getElementById("tagEdit").value = plan.tag.join("\n");
+      document.getElementById("spaetEdit").value = plan.spaet.join("\n");
+    }
+
+    function closeAdmin() {
+      document.getElementById("adminModal").style.display = "none";
+    }
+
+    function saveAdmin() {
+      plan.frueh = document.getElementById("fruehEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
+      plan.tag = document.getElementById("tagEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
+      plan.spaet = document.getElementById("spaetEdit").value.split("\n").map(t => t.trim()).filter(Boolean);
+      localStorage.setItem("putzplan_admin_tasks", JSON.stringify(plan));
+      closeAdmin();
       renderPlan();
     }
 
