@@ -3,353 +3,315 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Putzplan mit Admin & Unterschrift</title>
+<title>Putzplan</title>
 <style>
-  /* Basis und Layout */
+  /* --- Grunddesign --- */
+  :root {
+    --color-primary: #2a9d8f;
+    --color-secondary: #264653;
+    --color-bg: #e9f5f2;
+    --color-white: #fff;
+    --color-lightgray: #ccc;
+  }
   body {
-    font-family: Arial, sans-serif;
-    background: #e8f5e9;
-    color: #2e7d32;
-    margin: 0; padding: 20px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-secondary);
+    display: flex; flex-direction: column; min-height: 100vh;
   }
   header {
+    background: var(--color-primary);
+    color: var(--color-white);
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 15px;
+    flex-wrap: wrap;
   }
-  header button {
-    background: #2e7d32;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
+  header > * {
+    margin: 4px;
   }
-  header .date-controls {
+  #dateNavigation {
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  header .date-controls button {
-    background: #81c784;
-    font-weight: normal;
-    font-size: 1.1em;
+  #dateNavigation button {
+    background: var(--color-white);
+    border: none;
+    color: var(--color-primary);
     padding: 6px 12px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 6px;
+    user-select: none;
   }
-  header .date-display {
-    font-weight: bold;
-    font-size: 1.3em;
+  #dateNavigation button:hover {
+    background: #d1ede9;
+  }
+  #currentDate {
+    font-weight: 700;
+    font-size: 1.1rem;
+    min-width: 140px;
+    text-align: center;
+  }
+  #adminToggle {
+    background: var(--color-white);
+    border: none;
+    color: var(--color-primary);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 6px 14px;
+  }
+  #adminToggle.active {
+    background: #1f7a71;
+    color: var(--color-white);
   }
 
   main {
-    flex-grow: 1;
+    flex: 1;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+    gap: 20px;
+  }
+  section.shift {
+    background: var(--color-white);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
-    gap: 15px;
-  }
-
-  section.shift {
-    background: #c8e6c9;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 1px 1px 6px #9ccc65aa;
   }
   section.shift h2 {
     margin-top: 0;
-    border-bottom: 2px solid #2e7d32;
+    margin-bottom: 12px;
+    border-bottom: 2px solid var(--color-primary);
     padding-bottom: 6px;
+    color: var(--color-primary);
   }
   .tasks {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 60vh;
   }
   .task {
-    background: #a5d6a7;
-    border-radius: 6px;
-    padding: 8px 12px;
+    background: #f7f9f9;
+    border: 1px solid var(--color-lightgray);
+    border-radius: 8px;
+    padding: 10px 12px;
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    user-select: none;
   }
   .task input[type="text"] {
-    flex-grow: 1;
-    min-width: 180px;
+    border: 1px solid var(--color-lightgray);
     border-radius: 5px;
-    border: 1px solid #1b5e20;
     padding: 6px 8px;
-    font-size: 1em;
-  }
-  .task span.task-text {
-    flex-grow: 1;
-    word-break: break-word;
-  }
-  button.addTaskBtn {
-    margin-top: 12px;
-    background: #1b5e20;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 15px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  button.addTaskBtn:disabled {
-    background: #a5d6a7;
-    cursor: not-allowed;
-  }
-  button.delTaskBtn, button.signBtn {
-    background: #388e3c;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-weight: bold;
-    flex-shrink: 0;
-  }
-  button.delTaskBtn {
-    background: #a52714;
-  }
-  button.delTaskBtn:hover, button.signBtn:hover, button.addTaskBtn:hover:not(:disabled) {
-    opacity: 0.8;
-  }
-  img.signature-img {
-    max-height: 50px;
-    border: 1px solid #1b5e20;
-    border-radius: 5px;
-  }
-
-  /* Signature Popup */
-  #signaturePopup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 320px;
-    max-width: 90vw;
-    background: white;
-    border-radius: 10px;
-    padding: 15px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.4);
-    transform: translate(-50%, -50%);
-    display: none;
-    z-index: 1000;
-  }
-  #signatureCanvas {
-    border: 1px solid #1b5e20;
+    font-size: 1rem;
     width: 100%;
-    height: 150px;
-    border-radius: 6px;
-    touch-action: none; /* Für Touch Zeichnen */
+    box-sizing: border-box;
   }
-  #signaturePopupButtons {
-    margin-top: 10px;
+  .task-text {
+    font-size: 1rem;
+    color: var(--color-secondary);
+  }
+  .task-controls {
+    margin-top: 8px;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
   }
-  #signaturePopup button {
-    background: #2e7d32;
+  .task-controls button {
+    background: var(--color-primary);
     border: none;
-    color: white;
-    padding: 6px 14px;
-    border-radius: 6px;
+    color: var(--color-white);
+    padding: 4px 10px;
+    font-size: 1rem;
     cursor: pointer;
-    font-weight: bold;
+    border-radius: 6px;
   }
-  #signaturePopup button#clearSignatureBtn {
-    background: #a52714;
+  .task-controls button:hover {
+    background: #1f7a71;
   }
-  #signaturePopup button:hover {
-    opacity: 0.85;
+  .sign-button {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    user-select: none;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    color: var(--color-primary);
+  }
+  .sign-button:hover {
+    color: #1f7a71;
+  }
+  .signature-image {
+    margin-top: 8px;
+    max-height: 80px;
+    max-width: 100%;
+    border: 1px solid var(--color-lightgray);
+    border-radius: 6px;
+  }
+  button.addTask {
+    margin-top: 12px;
+    background: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  button.addTask:disabled {
+    background: var(--color-lightgray);
+    cursor: not-allowed;
+  }
+  button.addTask:hover:not(:disabled) {
+    background: #1f7a71;
   }
 
-  /* Responsive */
-  @media (max-width: 600px) {
-    .task input[type="text"], .task span.task-text {
-      flex-basis: 100%;
-    }
-    .task {
-      gap: 8px;
-    }
+  /* --- Overlay für Unterschrift --- */
+  #signatureOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  }
+  #signatureBox {
+    background: var(--color-white);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #signatureCanvas {
+    border: 1px solid var(--color-primary);
+    border-radius: 8px;
+    touch-action: none;
+    background: #f9f9f9;
+  }
+  #signatureButtons {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+  }
+  #signatureButtons button {
+    padding: 8px 14px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    user-select: none;
+  }
+  #saveSignatureBtn {
+    background-color: var(--color-primary);
+    color: white;
+  }
+  #clearSignatureBtn {
+    background-color: #e76f51;
+    color: white;
+  }
+  #closeSignatureBtn {
+    background-color: #aaa;
+    color: white;
+  }
+
+  /* Scrollbar Styling */
+  .tasks::-webkit-scrollbar {
+    width: 8px;
+  }
+  .tasks::-webkit-scrollbar-thumb {
+    background-color: var(--color-primary);
+    border-radius: 10px;
+  }
+  .tasks::-webkit-scrollbar-track {
+    background: #f1f1f1;
   }
 </style>
 </head>
 <body>
 
 <header>
-  <button id="adminToggleBtn">Adminmodus: Aus</button>
-  <div class="date-controls">
-    <button id="prevDateBtn" title="Vortag">&lt;</button>
-    <div class="date-display" id="dateDisplay"></div>
-    <button id="nextDateBtn" title="Nächstes Datum">&gt;</button>
+  <button id="adminToggle" title="Adminmodus ein-/ausschalten">Adminmodus</button>
+
+  <div id="dateNavigation" aria-label="Datum Navigation">
+    <button id="prevDay" aria-label="Vorheriger Tag">&lt;</button>
+    <span id="currentDate" aria-live="polite" aria-atomic="true"></span>
+    <button id="nextDay" aria-label="Nächster Tag">&gt;</button>
   </div>
 </header>
 
 <main>
-  <section class="shift" id="shift-frueh">
+  <section id="shiftFrueh" class="shift" aria-label="Frühschicht">
     <h2>Frühschicht</h2>
-    <div class="tasks"></div>
-    <button class="addTaskBtn" disabled>+ Aufgabe hinzufügen</button>
+    <div class="tasks" id="tasksFrueh" aria-live="polite"></div>
+    <button class="addTask" id="addFrueh" disabled>+ Aufgabe hinzufügen</button>
   </section>
-  <section class="shift" id="shift-tag">
+
+  <section id="shiftTag" class="shift" aria-label="Tagesschicht">
     <h2>Tagesschicht</h2>
-    <div class="tasks"></div>
-    <button class="addTaskBtn" disabled>+ Aufgabe hinzufügen</button>
+    <div class="tasks" id="tasksTag" aria-live="polite"></div>
+    <button class="addTask" id="addTag" disabled>+ Aufgabe hinzufügen</button>
   </section>
-  <section class="shift" id="shift-spaet">
+
+  <section id="shiftSpaet" class="shift" aria-label="Spätschicht">
     <h2>Spätschicht</h2>
-    <div class="tasks"></div>
-    <button class="addTaskBtn" disabled>+ Aufgabe hinzufügen</button>
+    <div class="tasks" id="tasksSpaet" aria-live="polite"></div>
+    <button class="addTask" id="addSpaet" disabled>+ Aufgabe hinzufügen</button>
   </section>
 </main>
 
-<!-- Signatur Popup -->
-<div id="signaturePopup" aria-hidden="true">
-  <canvas id="signatureCanvas" width="300" height="150"></canvas>
-  <div id="signaturePopupButtons">
-    <button id="saveSignatureBtn">Speichern</button>
-    <button id="clearSignatureBtn">Löschen</button>
-    <button id="closeSignatureBtn">Abbrechen</button>
+<!-- Overlay für Unterschrift -->
+<div id="signatureOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="signatureTitle">
+  <div id="signatureBox">
+    <h3 id="signatureTitle">Unterschrift</h3>
+    <canvas id="signatureCanvas" width="400" height="180"></canvas>
+    <div id="signatureButtons">
+      <button id="saveSignatureBtn">Speichern</button>
+      <button id="clearSignatureBtn">Löschen</button>
+      <button id="closeSignatureBtn">Schließen</button>
+    </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const shifts = ['frueh', 'tag', 'spaet'];
+  // --- Variablen ---
   let adminMode = false;
-
-  // Aktuelles Datum als Basis
   let currentDate = new Date();
+  const DATE_OPTIONS = { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'short' };
 
-  // DOM Elemente
-  const adminToggleBtn = document.getElementById('adminToggleBtn');
-  const dateDisplay = document.getElementById('dateDisplay');
-  const prevDateBtn = document.getElementById('prevDateBtn');
-  const nextDateBtn = document.getElementById('nextDateBtn');
-  const addTaskButtons = document.querySelectorAll('.addTaskBtn');
-  const signaturePopup = document.getElementById('signaturePopup');
-  const signatureCanvas = document.getElementById('signatureCanvas');
-  const ctx = signatureCanvas.getContext('2d');
-  const saveSignatureBtn = document.getElementById('saveSignatureBtn');
-  const clearSignatureBtn = document.getElementById('clearSignatureBtn');
-  const closeSignatureBtn = document.getElementById('closeSignatureBtn');
+  // Speichern der Aufgaben und Signaturen in localStorage unter key "putzplan_<date>"
+  // Struktur: { frueh: [ {id, text, signature, signDate, signer}, ...], tag: [...], spaet: [...] }
 
-  let isDrawing = false;
-  let lastX = 0, lastY = 0;
-  let currentSignature = { shift: null, taskIdx: null };
+  // Elemente
+  const adminToggleBtn = document.getElementById('adminToggle');
+  const currentDateSpan = document.getElementById('currentDate');
+  const prevDayBtn = document.getElementById('prevDay');
+  const nextDayBtn = document.getElementById('nextDay');
 
-  // Hilfsfunktionen für Datum
-  function formatDate(d) {
-    return d.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  }
-  function formatDateLong(d) {
-    return d.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  }
+  const tasksFruehDiv = document.getElementById('tasksFrueh');
+  const tasksTagDiv = document.getElementById('tasksTag');
+  const tasksSpaetDiv = document.getElementById('tasksSpaet');
 
-  function updateDateDisplay() {
-    dateDisplay.textContent = formatDateLong(currentDate);
-  }
+  const addFruehBtn = document.getElementById('addFrueh');
+  const addTagBtn = document.getElementById('addTag');
+  const addSpaetBtn = document.getElementById('addSpaet');
 
-  // Lokaler Speicher Schlüssel
-  // Wir speichern für jedes Datum und jede Schicht die Aufgaben und Unterschriften getrennt
-  // Key Beispiel: "tasks_2025-05-28_frueh"
-  function getDateKey(date) {
-    // YYYY-MM-DD
-    return date.toISOString().slice(0,10);
-  }
-  function tasksKey(date, shift) {
-    return `tasks_${getDateKey(date)}_${shift}`;
-  }
-  function sigKey(date, shift, idx) {
-    return `signature_${getDateKey(date)}_${shift}_${idx}`;
-  }
-
-  // Aufgaben laden & speichern
-  function loadTasks(date, shift) {
-    try {
-      const raw = localStorage.getItem(tasksKey(date, shift));
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-  function saveTasks(date, shift, tasks) {
-    localStorage.setItem(tasksKey(date, shift), JSON.stringify(tasks));
-  }
-
-  // Signatur laden & speichern
-  function loadSignature(date, shift, idx) {
-    return localStorage.getItem(sigKey(date, shift, idx));
-  }
-  function saveSignature(date, shift, idx, dataUrl) {
-    localStorage.setItem(sigKey(date, shift, idx), dataUrl);
-  }
-
-  // Aufgaben rendern
-  function renderTasks(date, shift) {
-    const container = document.querySelector(`#shift-${shift} .tasks`);
-    container.innerHTML = '';
-    const tasks = loadTasks(date, shift);
-
-    tasks.forEach((taskText, idx) => {
-      const taskDiv = document.createElement('div');
-      taskDiv.className = 'task';
-
-      if(adminMode) {
-        // Eingabefeld zum Bearbeiten
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = taskText;
-        input.setAttribute('aria-label', `Aufgabe bearbeiten ${shift} ${idx + 1}`);
-        input.oninput = () => {
-          const tasksNow = loadTasks(date, shift);
-          tasksNow[idx] = input.value;
-          saveTasks(date, shift, tasksNow);
-        };
-        taskDiv.appendChild(input);
-
-        // Löschen Button
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delTaskBtn';
-        delBtn.textContent = '×';
-        delBtn.title = 'Aufgabe löschen';
-        delBtn.setAttribute('aria-label', `Aufgabe löschen ${shift} ${idx + 1}`);
-        delBtn.onclick = () => {
-          const tasksNow = loadTasks(date, shift);
-          tasksNow.splice(idx, 1);
-          saveTasks(date, shift, tasksNow);
-          // Signatur mit löschen
-          localStorage.removeItem(sigKey(date, shift, idx));
-          renderTasks(date, shift);
-        };
-        taskDiv.appendChild(delBtn);
-      } else {
-        // Nur Text anzeigen
-        const span = document.createElement('span');
-        span.className = 'task-text';
-        span.textContent = taskText;
-        taskDiv.appendChild(span);
-      }
-
-      // Unterschriften-Button (immer sichtbar)
-      const signBtn = document.createElement('button');
-      signBtn.className = 'signBtn';
-      signBtn.textContent = '✍️ Unterschreiben';
-      signBtn.title = 'Unterschrift setzen/ansehen';
-      signBtn.setAttribute('aria-label', `Unterschrift für Aufgabe ${shift} ${idx + 1} anzeigen`);
-      signBtn.onclick = () => openSignaturePopup(date, shift, idx);
-      taskDiv.appendChild(signBtn);
-
-      // Signatur-Bild (wenn vorhanden)
-      const sigData = loadSignature(date, shift, idx);
-      if(sigData) {
-        const img = document.createElement('img');
-        img.className = 'signature-img';
+  const signatureOverlay = document.getElementById('signatureOverlay');
+  const signatureCanvas = document.get
