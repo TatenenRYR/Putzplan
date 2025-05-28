@@ -3,57 +3,112 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Putzplan mit Unterschrift</title>
+<title>Putzplan Monatsansicht mit Signaturen</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    max-width: 600px;
+    max-width: 900px;
     margin: 20px auto;
   }
-  h2 {
-    margin-bottom: 0;
+  h1 {
+    text-align: center;
   }
+  #monthYearControls {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  #monthYearControls button {
+    padding: 6px 12px;
+    font-size: 16px;
+    margin: 0 10px;
+    cursor: pointer;
+  }
+  #monthYearControls span {
+    font-weight: bold;
+    font-size: 18px;
+    min-width: 150px;
+    display: inline-block;
+  }
+
+  /* Tages-Grid */
+  #daysGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .dayCell {
+    padding: 10px;
+    background: #e0f2f1;
+    border: 1px solid #4caf50;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  .dayCell:hover {
+    background: #81c784;
+  }
+  .dayCell.selected {
+    background: #4caf50;
+    color: white;
+  }
+  .dayCell.disabled {
+    background: #ddd;
+    border-color: #aaa;
+    color: #999;
+    cursor: default;
+  }
+
+  /* Dienst Tabs */
   .nav-tabs {
-    margin: 10px 0 20px;
     display: flex;
     gap: 10px;
+    margin-bottom: 15px;
+    justify-content: center;
   }
   .nav-tabs button {
     flex: 1;
     padding: 8px;
-    cursor: pointer;
     border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
     background: #eee;
-    border-radius: 4px;
   }
   .nav-tabs button.active {
     background: #4caf50;
     color: white;
     font-weight: bold;
   }
+
+  /* Aufgabenliste */
   .task-list {
-    min-height: 80px;
+    min-height: 100px;
     border: 1px solid #ccc;
     padding: 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #fafafa;
+    max-width: 700px;
+    margin: 0 auto 20px auto;
   }
   .task {
-    margin-bottom: 10px;
-    padding: 8px 40px 8px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
     position: relative;
+    padding: 10px 40px 10px 10px;
+    margin-bottom: 10px;
     background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
   }
   .sign-icon {
     position: absolute;
-    right: 8px;
+    right: 10px;
     top: 50%;
-    transform: translateY(-50%);
+    font-size: 20px;
     cursor: pointer;
-    font-size: 18px;
     user-select: none;
+    transform: translateY(-50%);
   }
   .signature-image img {
     max-height: 70px;
@@ -62,18 +117,20 @@
     border-radius: 4px;
   }
   button.add-task {
-    margin-top: 10px;
-    padding: 8px 12px;
-    border: none;
-    background: #4caf50;
-    color: white;
+    display: block;
+    margin: 0 auto 30px auto;
+    padding: 10px 18px;
     font-weight: bold;
-    border-radius: 5px;
+    background: #4caf50;
+    border: none;
+    border-radius: 6px;
+    color: white;
     cursor: pointer;
   }
   button.add-task:hover {
     background: #45a045;
   }
+
   /* Signatur Popup */
   .signature-popup {
     position: fixed;
@@ -83,14 +140,14 @@
     background: white;
     border: 1px solid #666;
     padding: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 10000;
     border-radius: 8px;
   }
   .signature-popup button {
-    margin-top: 10px;
-    margin-right: 8px;
-    padding: 6px 12px;
+    margin-top: 12px;
+    margin-right: 10px;
+    padding: 6px 14px;
     font-weight: bold;
     cursor: pointer;
   }
@@ -104,7 +161,15 @@
 </head>
 <body>
 
-<h2>Putzplan</h2>
+<h1>Putzplan Monatsansicht mit Unterschriften</h1>
+
+<div id="monthYearControls">
+  <button id="prevMonthBtn" title="Vorheriger Monat">◀</button>
+  <span id="currentMonthYear"></span>
+  <button id="nextMonthBtn" title="Nächster Monat">▶</button>
+</div>
+
+<div id="daysGrid"></div>
 
 <div class="nav-tabs">
   <button id="btn-frueh" class="active" onclick="showSection('frueh')">Frühdienst</button>
@@ -135,197 +200,40 @@
 </div>
 
 <script>
-  // Navigation Tabs
-  function showSection(section) {
-    ['frueh','tag','spaet'].forEach(sec => {
-      document.getElementById(sec).style.display = sec === section ? 'block' : 'none';
-      document.getElementById('btn-' + sec).classList.toggle('active', sec === section);
-    });
-  }
-
-  // Aufgabenverwaltung
+  // Variablen für Datum
+  let currentYear, currentMonth; // Monat = 0-11
+  let selectedDay = null;
   let currentTaskId = null;
-  let isDrawing = false;
-  let lastX = 0;
-  let lastY = 0;
 
+  // Canvas Setup
   const canvas = document.getElementById('signatureCanvas');
   const ctx = canvas.getContext('2d');
   ctx.strokeStyle = '#000';
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
 
-  function addTask(listId) {
-    const taskList = document.getElementById(listId);
-    const taskId = 'task-' + Date.now();
+  let isDrawing = false;
+  let lastX = 0;
+  let lastY = 0;
 
-    // Standard-Aufgabenname (du kannst das anpassen oder per Prompt fragen)
-    const taskName = prompt('Aufgabenbeschreibung eingeben:', 'Neue Aufgabe');
-    if (!taskName) return;
-
-    const taskDiv = document.createElement('div');
-    taskDiv.classList.add('task');
-    taskDiv.id = taskId;
-    taskDiv.innerHTML = `
-      ${taskName}
-      <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${taskId}')">🖊️</span>
-      <div class="signature-image"></div>
-    `;
-
-    taskList.appendChild(taskDiv);
-
-    loadSignature(taskId);
-    saveTasksToStorage();
+  // Initial Datum setzen (aktueller Monat)
+  function initDate() {
+    const now = new Date();
+    currentYear = now.getFullYear();
+    currentMonth = now.getMonth();
   }
 
-  // Signatur Popup öffnen
-  function openSignaturePopup(taskId) {
-    currentTaskId = taskId;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Lade ggf. vorhandene Signatur in Canvas
-    const dataURL = localStorage.getItem('signature_' + taskId);
-    if (dataURL) {
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      img.src = dataURL;
-    }
-
-    document.getElementById('signaturePopup').style.display = 'block';
-  }
-  function closeSignaturePopup() {
-    document.getElementById('signaturePopup').style.display = 'none';
-    currentTaskId = null;
+  // Monat und Jahr anzeigen
+  function updateMonthYearDisplay() {
+    const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+      "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    document.getElementById('currentMonthYear').textContent = monthNames[currentMonth] + " " + currentYear;
   }
 
-  // Canvas Zeichnen
-  canvas.addEventListener('mousedown', startDrawing);
-  canvas.addEventListener('mousemove', draw);
-  canvas.addEventListener('mouseup', stopDrawing);
-  canvas.addEventListener('mouseout', stopDrawing);
-
-  canvas.addEventListener('touchstart', startDrawingTouch, {passive:false});
-  canvas.addEventListener('touchmove', drawTouch, {passive:false});
-  canvas.addEventListener('touchend', stopDrawing);
-
-  function startDrawing(e) {
-    isDrawing = true;
-    lastX = e.offsetX;
-    lastY = e.offsetY;
-  }
-  function draw(e) {
-    if (!isDrawing) return;
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    lastX = e.offsetX;
-    lastY = e.offsetY;
-  }
-  function stopDrawing() {
-    isDrawing = false;
-  }
-  // Touch
-  function getTouchPos(touchEvent) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: touchEvent.touches[0].clientX - rect.left,
-      y: touchEvent.touches[0].clientY - rect.top
-    };
-  }
-  function startDrawingTouch(e) {
-    e.preventDefault();
-    isDrawing = true;
-    const pos = getTouchPos(e);
-    lastX = pos.x;
-    lastY = pos.y;
-  }
-  function drawTouch(e) {
-    e.preventDefault();
-    if (!isDrawing) return;
-    const pos = getTouchPos(e);
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    lastX = pos.x;
-    lastY = pos.y;
+  // Tage des Monats ermitteln
+  function getDaysInMonth(year, month) {
+    // Tage im Monat: 0. Tag des Folgemonats - 1
+    return new Date(year, month + 1, 0).getDate();
   }
 
-  // Signatur speichern
-  function saveSignature() {
-    if (!currentTaskId) return;
-    const dataURL = canvas.toDataURL();
-    localStorage.setItem('signature_' + currentTaskId, dataURL);
-
-    loadSignature(currentTaskId);
-    closeSignaturePopup();
-  }
-
-  // Signatur in Aufgabe anzeigen
-  function loadSignature(taskId) {
-    const dataURL = localStorage.getItem('signature_' + taskId);
-    if (dataURL) {
-      const taskDiv = document.getElementById(taskId);
-      if (taskDiv) {
-        const imgDiv = taskDiv.querySelector('.signature-image');
-        if (imgDiv) {
-          imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" />`;
-        }
-      }
-    }
-  }
-
-  // Aufgaben & Signaturen im localStorage speichern / laden
-  function saveTasksToStorage() {
-    const allTasks = {};
-    ['frueh-list','tag-list','spaet-list'].forEach(listId => {
-      const list = document.getElementById(listId);
-      const tasks = [];
-      list.querySelectorAll('.task').forEach(task => {
-        tasks.push({
-          id: task.id,
-          text: task.childNodes[0].textContent.trim()
-        });
-      });
-      allTasks[listId] = tasks;
-    });
-    localStorage.setItem('putzplan-tasks', JSON.stringify(allTasks));
-  }
-  function loadTasksFromStorage() {
-    const allTasks = JSON.parse(localStorage.getItem('putzplan-tasks'));
-    if (!allTasks) return;
-    Object.entries(allTasks).forEach(([listId, tasks]) => {
-      const list = document.getElementById(listId);
-      list.innerHTML = '';
-      tasks.forEach(t => {
-        const taskDiv = document.createElement('div');
-        taskDiv.classList.add('task');
-        taskDiv.id = t.id;
-        taskDiv.innerHTML = `
-          ${t.text}
-          <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${t.id}')">🖊️</span>
-          <div class="signature-image"></div>
-        `;
-        list.appendChild(taskDiv);
-        loadSignature(t.id);
-      });
-    });
-  }
-
-  // Beim Start die Aufgaben laden
-  window.onload = () => {
-    loadTasksFromStorage();
-  };
-
-  // Beim Aufgaben hinzufügen speichern
-  document.querySelectorAll('.add-task').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // kleiner Delay, damit addTask() fertig wird, dann speichern
-      setTimeout(() => saveTasksToStorage(), 200);
-    });
-  });
-</script>
-
-</body>
-</html>
+  // Tage-Grid bauen
