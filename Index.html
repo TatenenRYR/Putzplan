@@ -11,36 +11,98 @@
     .section { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
     ul { list-style: none; padding: 0; }
     li { padding: 0.5rem; border-bottom: 1px solid #ddd; }
-    .sign { font-style: italic; color: #999; margin-left: 1rem; white-space: nowrap; cursor: pointer; }
+    .sign { font-style: italic; color: #999; margin-left: 1rem; white-space: nowrap; cursor: pointer; display: inline-block; vertical-align: middle; }
+    .sign img { height: 30px; vertical-align: middle; }
     .sign.filled { color: #4caf50; font-style: normal; }
     .btn { display: block; margin: 1rem auto; padding: 0.5rem 1rem; font-size: 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
     .nav-btn { background-color: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
     .admin-link { text-align: center; margin-top: 1rem; }
     .admin-link a { color: #007bff; text-decoration: underline; cursor: pointer; }
-    #adminModal, #signatureModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; }
+    #signatureModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 999; }
     .modal-content { background: white; padding: 1rem; border-radius: 10px; width: 90%; max-width: 600px; }
-    .modal-content textarea { width: 100%; height: 60px; margin-bottom: 0.5rem; }
-    .day-switch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    #progressBar { margin-top: 1rem; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; }
-    #progressFill { height: 100%; background: #4caf50; width: 0; transition: width 0.3s ease-in-out; }
-    .lang-select { margin-bottom: 1rem; text-align: center; }
-    canvas { border: 1px solid #ccc; touch-action: none; }
+    canvas { border: 1px solid #ccc; width: 100%; height: 200px; touch-action: none; display: block; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
-  <!-- ... (Rest unchanged until script) ... -->  <!-- Signature Modal -->  <div id="signatureModal">
+  <h1>Putzplan</h1>
+  <div class="date-nav">
+    <button class="nav-btn" onclick="changeDay(-1)">◀</button>
+    <div class="date-display" id="dateDisplay"></div>
+    <button class="nav-btn" onclick="changeDay(1)">▶</button>
+  </div>  <div class="section">
+    <h2>Frühdienst</h2>
+    <ul id="frueh"></ul>
+  </div>
+  <div class="section">
+    <h2>Tagdienst</h2>
+    <ul id="tag"></ul>
+  </div>
+  <div class="section">
+    <h2>Spätdienst</h2>
+    <ul id="spaet"></ul>
+  </div>  <!-- Signature Modal -->  <div id="signatureModal">
     <div class="modal-content">
       <p>Unterschrift eingeben:</p>
-      <canvas id="signaturePad" width="500" height="200"></canvas>
+      <canvas id="signaturePad"></canvas>
       <button class="btn" onclick="saveSignature()">Speichern</button>
       <button class="btn" style="background:#999" onclick="closeSignatureModal()">Abbrechen</button>
     </div>
   </div>  <script>
+    let dayOffset = 0;
     let currentSignTarget = null;
+
     const canvas = document.getElementById("signaturePad");
     const ctx = canvas.getContext("2d");
     let drawing = false;
-    let offsetX, offsetY;
+
+    function getDayOffsetDate() {
+      const date = new Date();
+      date.setDate(date.getDate() + dayOffset);
+      return date;
+    }
+
+    function updateDateDisplay() {
+      const date = getDayOffsetDate();
+      document.getElementById("dateDisplay").textContent = date.toLocaleDateString();
+    }
+
+    function changeDay(offset) {
+      dayOffset += offset;
+      renderPlan();
+    }
+
+    function renderPlan() {
+      updateDateDisplay();
+      const dateKey = "plan_" + getDayOffsetDate().toISOString().slice(0, 10);
+      const data = JSON.parse(localStorage.getItem(dateKey) || '{}');
+      ["frueh", "tag", "spaet"].forEach(id => {
+        const container = document.getElementById(id);
+        container.innerHTML = '';
+        const tasks = (data[id] || '').split("\n");
+        tasks.forEach((task, i) => {
+          const li = document.createElement("li");
+          li.textContent = task;
+          const sign = document.createElement("span");
+          sign.className = "sign";
+          const sigKey = `${id}_sig_${i}`;
+          const sigVal = data[sigKey] || "";
+
+          if (sigVal.startsWith("data:image")) {
+            const img = document.createElement("img");
+            img.src = sigVal;
+            img.alt = "Unterschrift";
+            sign.classList.add("filled");
+            sign.appendChild(img);
+          } else {
+            sign.textContent = " ✍️";
+            sign.onclick = () => openSignatureModal(sigKey, dateKey);
+          }
+
+          li.appendChild(sign);
+          container.appendChild(li);
+        });
+      });
+    }
 
     function openSignatureModal(sigKey, dayKey) {
       currentSignTarget = { sigKey, dayKey };
@@ -61,72 +123,48 @@
       renderPlan();
     }
 
-    canvas.addEventListener("mousedown", startDraw);
-    canvas.addEventListener("mousemove", draw);
-    canvas.addEventListener("mouseup", endDraw);
-    canvas.addEventListener("mouseout", endDraw);
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX || e.touches[0].clientX) - rect.left,
+        y: (e.clientY || e.touches[0].clientY) - rect.top
+      };
+    }
 
-    canvas.addEventListener("touchstart", e => startDraw(e.touches[0]));
+    canvas.addEventListener("mousedown", e => {
+      drawing = true;
+      const { x, y } = getCanvasCoords(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (!drawing) return;
+      const { x, y } = getCanvasCoords(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    });
+
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mouseout", () => drawing = false);
+
+    canvas.addEventListener("touchstart", e => {
+      drawing = true;
+      const { x, y } = getCanvasCoords(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    });
+
     canvas.addEventListener("touchmove", e => {
-      draw(e.touches[0]);
+      if (!drawing) return;
+      const { x, y } = getCanvasCoords(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
       e.preventDefault();
     });
-    canvas.addEventListener("touchend", endDraw);
 
-    function startDraw(e) {
-      offsetX = canvas.offsetLeft;
-      offsetY = canvas.offsetTop;
-      drawing = true;
-      ctx.beginPath();
-      ctx.moveTo(e.clientX - offsetX, e.clientY - offsetY);
-    }
+    canvas.addEventListener("touchend", () => drawing = false);
 
-    function draw(e) {
-      if (!drawing) return;
-      ctx.lineTo(e.clientX - offsetX, e.clientY - offsetY);
-      ctx.stroke();
-    }
-
-    function endDraw() {
-      drawing = false;
-    }
-
-    // Replace prompt part in renderPlan()
-    function renderPlan() {
-      updateDateDisplay();
-      const dayKey = "plan_" + getDayOffsetDate().toISOString().slice(0, 10);
-      const data = JSON.parse(localStorage.getItem(dayKey) || '{}');
-
-      ["frueh", "tag", "spaet"].forEach(id => {
-        const container = document.getElementById(id);
-        container.innerHTML = '';
-        const tasks = (data[id] || "").split("\n");
-        tasks.forEach((task, i) => {
-          const li = document.createElement("li");
-          const sign = document.createElement("span");
-          sign.className = "sign";
-          const sigKey = `${id}_sig_${i}`;
-          const sigVal = data[sigKey] || "";
-
-          if (sigVal.startsWith("data:image")) {
-            const img = document.createElement("img");
-            img.src = sigVal;
-            img.alt = "Unterschrift";
-            img.style.height = "30px";
-            sign.classList.add("filled");
-            sign.textContent = '';
-            sign.appendChild(img);
-          } else {
-            sign.textContent = " - klicken zum Unterschreiben";
-            sign.onclick = () => openSignatureModal(sigKey, dayKey);
-          }
-
-          li.textContent = task;
-          li.appendChild(sign);
-          container.appendChild(li);
-        });
-      });
-      updateProgress();
-    }
+    renderPlan();
   </script></body>
 </html>
