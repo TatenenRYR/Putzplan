@@ -5,283 +5,300 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Putzplan</title>
 <style>
-  /* --- Grunddesign --- */
   :root {
-    --color-primary: #2a9d8f;
-    --color-secondary: #264653;
-    --color-bg: #e9f5f2;
-    --color-white: #fff;
-    --color-lightgray: #ccc;
+    --color-green: #2a9d8f;
+    --color-dark-green: #1f716a;
+    --color-light-green: #e0f2f1;
+    --color-red: #e76f51;
+    --color-gray-light: #ddd;
+    --color-gray-dark: #333;
   }
   body {
-    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: var(--color-bg);
-    color: var(--color-secondary);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0; background: #f8f9fa; color: var(--color-gray-dark);
     display: flex; flex-direction: column; min-height: 100vh;
   }
   header {
-    background: var(--color-primary);
-    color: var(--color-white);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    background: var(--color-green);
+    color: white;
+    padding: 10px 20px;
+    display: flex; justify-content: space-between; align-items: center;
     flex-wrap: wrap;
   }
-  header > * {
-    margin: 4px;
+  header h1 {
+    margin: 0;
+    font-weight: 700;
   }
-  #dateNavigation {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  #dateNavigation button {
-    background: var(--color-white);
-    border: none;
-    color: var(--color-primary);
-    padding: 6px 12px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    border-radius: 6px;
+  #dateControls {
+    display: flex; align-items: center; gap: 10px; font-weight: 600;
     user-select: none;
   }
-  #dateNavigation button:hover {
-    background: #d1ede9;
-  }
-  #currentDate {
+  #dateControls button {
+    background: white; border: none; border-radius: 4px; padding: 5px 10px;
+    font-size: 1rem; cursor: pointer;
+    color: var(--color-green);
     font-weight: 700;
-    font-size: 1.1rem;
-    min-width: 140px;
-    text-align: center;
+    transition: background-color 0.3s;
+  }
+  #dateControls button:hover {
+    background: var(--color-light-green);
   }
   #adminToggle {
-    background: var(--color-white);
+    background: white;
     border: none;
-    color: var(--color-primary);
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 6px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-green);
+    transition: background-color 0.3s;
   }
   #adminToggle.active {
-    background: #1f7a71;
-    color: var(--color-white);
+    background: var(--color-dark-green);
+    color: white;
   }
 
   main {
-    flex: 1;
+    flex-grow: 1;
     padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+    max-width: 900px;
+    margin: 0 auto 40px;
+    display: flex;
+    flex-direction: column;
     gap: 20px;
   }
-  section.shift {
-    background: var(--color-white);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+
+  .shifts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+  }
+  .shift {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    padding: 15px;
+    flex: 1 1 250px;
+    min-width: 250px;
     display: flex;
     flex-direction: column;
   }
-  section.shift h2 {
+  .shift h2 {
     margin-top: 0;
-    margin-bottom: 12px;
-    border-bottom: 2px solid var(--color-primary);
+    color: var(--color-green);
+    border-bottom: 2px solid var(--color-green);
     padding-bottom: 6px;
-    color: var(--color-primary);
   }
-  .tasks {
+
+  .tasks-list {
+    margin-top: 10px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: 350px;
     overflow-y: auto;
-    max-height: 60vh;
-  }
-  .task {
-    background: #f7f9f9;
-    border: 1px solid var(--color-lightgray);
-    border-radius: 8px;
-    padding: 10px 12px;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    user-select: none;
-  }
-  .task input[type="text"] {
-    border: 1px solid var(--color-lightgray);
-    border-radius: 5px;
-    padding: 6px 8px;
-    font-size: 1rem;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .task-text {
-    font-size: 1rem;
-    color: var(--color-secondary);
-  }
-  .task-controls {
-    margin-top: 8px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-  .task-controls button {
-    background: var(--color-primary);
-    border: none;
-    color: var(--color-white);
-    padding: 4px 10px;
-    font-size: 1rem;
-    cursor: pointer;
-    border-radius: 6px;
-  }
-  .task-controls button:hover {
-    background: #1f7a71;
-  }
-  .sign-button {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    user-select: none;
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    color: var(--color-primary);
-  }
-  .sign-button:hover {
-    color: #1f7a71;
-  }
-  .signature-image {
-    margin-top: 8px;
-    max-height: 80px;
-    max-width: 100%;
-    border: 1px solid var(--color-lightgray);
-    border-radius: 6px;
-  }
-  button.addTask {
-    margin-top: 12px;
-    background: var(--color-primary);
-    color: var(--color-white);
-    border: none;
-    padding: 10px;
-    font-size: 1rem;
-    border-radius: 10px;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.3s ease;
-  }
-  button.addTask:disabled {
-    background: var(--color-lightgray);
-    cursor: not-allowed;
-  }
-  button.addTask:hover:not(:disabled) {
-    background: #1f7a71;
   }
 
-  /* --- Overlay für Unterschrift --- */
+  .task {
+    background: var(--color-light-green);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    position: relative;
+  }
+  .task input[type="text"] {
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    width: 100%;
+    outline: none;
+    padding: 0 4px;
+  }
+  .task input[type="text"]:disabled {
+    color: var(--color-gray-dark);
+  }
+
+  .task-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .icon-button {
+    cursor: pointer;
+    font-size: 1.2rem;
+    user-select: none;
+    border: none;
+    background: transparent;
+    color: var(--color-green);
+    padding: 0;
+    line-height: 1;
+  }
+  .icon-button.delete {
+    color: var(--color-red);
+  }
+  .icon-button:disabled {
+    color: var(--color-gray-light);
+    cursor: default;
+  }
+  .add-task-btn {
+    margin-top: 10px;
+    background: var(--color-green);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background-color 0.3s;
+  }
+  .add-task-btn:hover:enabled {
+    background: var(--color-dark-green);
+  }
+  .add-task-btn:disabled {
+    background: var(--color-gray-light);
+    cursor: default;
+  }
+
+  /* Signatur Overlay */
   #signatureOverlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.5);
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 10000;
   }
   #signatureBox {
-    background: var(--color-white);
+    background: white;
     padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    border-radius: 10px;
+    box-shadow: 0 0 12px #000;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+  }
+  #signatureBox h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: var(--color-green);
   }
   #signatureCanvas {
-    border: 1px solid var(--color-primary);
+    border: 2px solid var(--color-green);
     border-radius: 8px;
     touch-action: none;
-    background: #f9f9f9;
+    width: 100%;
+    height: 180px;
   }
-  #signatureButtons {
-    margin-top: 12px;
-    display: flex;
-    gap: 12px;
-  }
-  #signatureButtons button {
-    padding: 8px 14px;
-    font-size: 1rem;
-    border-radius: 8px;
+  #signatureBox button {
+    margin: 10px 8px 0 8px;
+    padding: 8px 18px;
     border: none;
+    border-radius: 6px;
+    font-weight: 700;
     cursor: pointer;
-    user-select: none;
-  }
-  #saveSignatureBtn {
-    background-color: var(--color-primary);
     color: white;
+    transition: background-color 0.3s;
   }
-  #clearSignatureBtn {
-    background-color: #e76f51;
-    color: white;
+  #saveSignatureBtn { background: var(--color-green); }
+  #saveSignatureBtn:hover { background: var(--color-dark-green); }
+  #clearSignatureBtn { background: var(--color-red); }
+  #clearSignatureBtn:hover { background: #b33f2b; }
+  #closeSignatureBtn { background: #555; }
+  #closeSignatureBtn:hover { background: #333; }
+
+  /* History Modal */
+  #historyOverlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 11000;
   }
-  #closeSignatureBtn {
-    background-color: #aaa;
+  #historyBox {
+    background: white;
+    max-width: 600px;
+    max-height: 70vh;
+    width: 90%;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-y: auto;
+  }
+  #historyBox h3 {
+    margin-top: 0;
+    color: var(--color-green);
+  }
+  #historyCloseBtn {
+    margin-top: 15px;
+    background: var(--color-green);
     color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #historyCloseBtn:hover {
+    background: var(--color-dark-green);
   }
 
-  /* Scrollbar Styling */
-  .tasks::-webkit-scrollbar {
-    width: 8px;
-  }
-  .tasks::-webkit-scrollbar-thumb {
-    background-color: var(--color-primary);
-    border-radius: 10px;
-  }
-  .tasks::-webkit-scrollbar-track {
-    background: #f1f1f1;
+  /* Responsive */
+  @media (max-width: 600px) {
+    .shifts {
+      flex-direction: column;
+    }
+    .shift {
+      min-width: 100%;
+    }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <button id="adminToggle" title="Adminmodus ein-/ausschalten">Adminmodus</button>
-
-  <div id="dateNavigation" aria-label="Datum Navigation">
-    <button id="prevDay" aria-label="Vorheriger Tag">&lt;</button>
-    <span id="currentDate" aria-live="polite" aria-atomic="true"></span>
-    <button id="nextDay" aria-label="Nächster Tag">&gt;</button>
+  <h1>Putzplan</h1>
+  <div id="dateControls">
+    <button id="prevDayBtn" title="Vorheriger Tag">◀</button>
+    <div id="currentDate" aria-live="polite" aria-atomic="true" style="min-width:140px; text-align:center;"></div>
+    <button id="nextDayBtn" title="Nächster Tag">▶</button>
   </div>
+  <button id="adminToggle" aria-pressed="false" aria-label="Administration An/Aus">Administration</button>
+  <button id="showHistoryBtn" title="History ansehen" style="margin-left:10px; display:none;">History ansehen</button>
 </header>
 
 <main>
-  <section id="shiftFrueh" class="shift" aria-label="Frühschicht">
-    <h2>Frühschicht</h2>
-    <div class="tasks" id="tasksFrueh" aria-live="polite"></div>
-    <button class="addTask" id="addFrueh" disabled>+ Aufgabe hinzufügen</button>
-  </section>
-
-  <section id="shiftTag" class="shift" aria-label="Tagesschicht">
-    <h2>Tagesschicht</h2>
-    <div class="tasks" id="tasksTag" aria-live="polite"></div>
-    <button class="addTask" id="addTag" disabled>+ Aufgabe hinzufügen</button>
-  </section>
-
-  <section id="shiftSpaet" class="shift" aria-label="Spätschicht">
-    <h2>Spätschicht</h2>
-    <div class="tasks" id="tasksSpaet" aria-live="polite"></div>
-    <button class="addTask" id="addSpaet" disabled>+ Aufgabe hinzufügen</button>
-  </section>
+  <div class="shifts">
+    <section class="shift" aria-label="Frühschicht">
+      <h2>Frühschicht</h2>
+      <div class="tasks-list" id="tasks-frueh"></div>
+      <button class="add-task-btn" id="addFruehBtn" disabled>+ Aufgabe hinzufügen</button>
+    </section>
+    <section class="shift" aria-label="Tagesschicht">
+      <h2>Tagesschicht</h2>
+      <div class="tasks-list" id="tasks-tag"></div>
+      <button class="add-task-btn" id="addTagBtn" disabled>+ Aufgabe hinzufügen</button>
+    </section>
+    <section class="shift" aria-label="Spätschicht">
+      <h2>Spätschicht</h2>
+      <div class="tasks-list" id="tasks-spaet"></div>
+      <button class="add-task-btn" id="addSpaetBtn" disabled>+ Aufgabe hinzufügen</button>
+    </section>
+  </div>
 </main>
 
-<!-- Overlay für Unterschrift -->
-<div id="signatureOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="signatureTitle">
+<!-- Signatur Overlay -->
+<div id="signatureOverlay" role="dialog" aria-modal="true" aria-labelledby="signatureTitle">
   <div id="signatureBox">
     <h3 id="signatureTitle">Unterschrift</h3>
     <canvas id="signatureCanvas" width="400" height="180"></canvas>
-    <div id="signatureButtons">
+    <div>
       <button id="saveSignatureBtn">Speichern</button>
       <button id="clearSignatureBtn">Löschen</button>
       <button id="closeSignatureBtn">Schließen</button>
@@ -289,29 +306,44 @@
   </div>
 </div>
 
+<!-- History Overlay -->
+<div id="historyOverlay" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <div id="historyBox">
+    <h3 id="historyTitle">Unterschriften-Historie</h3>
+    <div id="historyContent" style="white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto;"></div>
+    <button id="historyCloseBtn">Schließen</button>
+  </div>
+</div>
+
 <script>
 (() => {
-  // --- Variablen ---
-  let adminMode = false;
+  // Globale Variablen
   let currentDate = new Date();
-  const DATE_OPTIONS = { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'short' };
+  let isAdmin = false;
+  let currentSignatureTask = null; // {dateStr, shift, taskId}
 
-  // Speichern der Aufgaben und Signaturen in localStorage unter key "putzplan_<date>"
-  // Struktur: { frueh: [ {id, text, signature, signDate, signer}, ...], tag: [...], spaet: [...] }
-
-  // Elemente
+  // DOM Elemente
+  const currentDateDisplay = document.getElementById('currentDate');
+  const prevDayBtn = document.getElementById('prevDayBtn');
+  const nextDayBtn = document.getElementById('nextDayBtn');
   const adminToggleBtn = document.getElementById('adminToggle');
-  const currentDateSpan = document.getElementById('currentDate');
-  const prevDayBtn = document.getElementById('prevDay');
-  const nextDayBtn = document.getElementById('nextDay');
+  const showHistoryBtn = document.getElementById('showHistoryBtn');
 
-  const tasksFruehDiv = document.getElementById('tasksFrueh');
-  const tasksTagDiv = document.getElementById('tasksTag');
-  const tasksSpaetDiv = document.getElementById('tasksSpaet');
+  const shifts = ['frueh', 'tag', 'spaet'];
+  const tasksContainers = {
+    frueh: document.getElementById('tasks-frueh'),
+    tag: document.getElementById('tasks-tag'),
+    spaet: document.getElementById('tasks-spaet'),
+  };
+  const addTaskButtons = {
+    frueh: document.getElementById('addFruehBtn'),
+    tag: document.getElementById('addTagBtn'),
+    spaet: document.getElementById('addSpaetBtn'),
+  };
 
-  const addFruehBtn = document.getElementById('addFrueh');
-  const addTagBtn = document.getElementById('addTag');
-  const addSpaetBtn = document.getElementById('addSpaet');
-
+  // Signatur-Overlay Elemente
   const signatureOverlay = document.getElementById('signatureOverlay');
-  const signatureCanvas = document.get
+  const signatureCanvas = document.getElementById('signatureCanvas');
+  const saveSignatureBtn = document.getElementById('saveSignatureBtn');
+  const clearSignatureBtn = document.getElementById('clearSignatureBtn');
+  const closeSignatureBtn = document.getElementById('closeSignatureBtn
