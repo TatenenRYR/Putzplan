@@ -2,60 +2,141 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Putzplan</title>
+  <title>Putzplan</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; background-color: #f9f9f9; }
+    body { font-family: sans-serif; padding: 1rem; background-color: #f0f0f0; }
     h1 { text-align: center; }
     .day { background: white; margin-bottom: 1rem; padding: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
     .day h2 { margin-top: 0; }
-    textarea { width: 100%; height: 60px; margin-bottom: 0.5rem; border: 1px solid #ccc; border-radius: 5px; padding: 0.5rem; }
-    .btn { padding: 0.5rem 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .nav { text-align: center; margin: 1rem 0; }
-    .nav button { margin: 0 0.5rem; padding: 0.5rem; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
-    .info { text-align: center; margin-bottom: 1rem; font-weight: bold; }
+    canvas { border: 1px solid #ccc; border-radius: 5px; display: block; margin-top: 5px; }
+    .controls { text-align: center; margin: 1rem 0; }
+    .admin-link { text-align: center; margin-top: 2rem; }
+    .hidden { display: none; }
+    #adminPanel { position: fixed; top: 10%; left: 10%; right: 10%; background: white; padding: 1rem; box-shadow: 0 0 10px #0003; border-radius: 10px; z-index: 10; }
+    #overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 5; }
   </style>
 </head>
 <body>
-  <h1>Administration Putzplan</h1>
-  <div class="info">Tag: <span id="dayInfo"></span></div>
-  <div class="nav">
-    <button onclick="switchDay(-1)">◀ Vorheriger</button>
-    <button onclick="switchDay(1)">Nächster ▶</button>
-  </div>  <div class="day">
-    <h2>Frühdienst</h2>
-    <textarea id="frueh"></textarea>
-  </div>
-  <div class="day">
-    <h2>Tagdienst</h2>
-    <textarea id="tag"></textarea>
-  </div>
-  <div class="day">
-    <h2>Spätdienst</h2>
-    <textarea id="spaet"></textarea>
+  <h1>Putzplan</h1>
+  <div id="content"></div>  <div class="controls">
+    <button onclick="prevDay()">◀</button>
+    <span id="dateDisplay"></span>
+    <button onclick="nextDay()">▶</button>
+  </div>  <div class="admin-link">
+    <a href="#" onclick="showAdminLogin()">Zur Administration</a>
+  </div>  <div id="overlay" class="hidden"></div>
+  <div id="adminPanel" class="hidden">
+    <h2>Administration</h2>
+    <div class="controls">
+      <button onclick="switchAdminDay(-1)">◀</button>
+      <span id="adminDayInfo"></span>
+      <button onclick="switchAdminDay(1)">▶</button>
+    </div>
+    <div>
+      <h3>Frühdienst</h3>
+      <textarea id="frueh"></textarea>
+      <h3>Tagdienst</h3>
+      <textarea id="tag"></textarea>
+      <h3>Spätdienst</h3>
+      <textarea id="spaet"></textarea>
+    </div>
+    <button onclick="closeAdmin()">Schließen</button>
   </div>  <script>
+    let currentDate = new Date();
     let adminDay = 0;
-    const adminPasswort = "admin123"; // Beispiel Passwort
+    const adminPassword = "admin123";
 
-    function updateDayInfo() {
-      document.getElementById("dayInfo").textContent = `Tag ${adminDay + 1} / 31`;
+    function formatDate(date) {
+      return date.toISOString().split('T')[0];
     }
 
-    function switchDay(delta) {
-      adminDay = (adminDay + delta + 31) % 31;
-      loadDay();
+    function updateDateDisplay() {
+      document.getElementById("dateDisplay").textContent = formatDate(currentDate);
     }
 
-    function loadDay() {
-      updateDayInfo();
-      const key = "plan_" + ("0000-01-" + String(adminDay + 1).padStart(2, '0'));
+    function loadPlan(dateStr) {
+      const key = "plan_" + dateStr;
       const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const content = document.getElementById("content");
+      content.innerHTML = '';
+
+      ["frueh", "tag", "spaet"].forEach((typ) => {
+        const div = document.createElement("div");
+        div.className = "day";
+        div.innerHTML = `<h2>${typ.charAt(0).toUpperCase() + typ.slice(1)}dienst</h2><p>${data[typ] || ''}</p><canvas width="300" height="50" data-typ="${typ}"></canvas>`;
+        content.appendChild(div);
+      });
+
+      document.querySelectorAll("canvas").forEach(canvas => {
+        const ctx = canvas.getContext("2d");
+        let drawing = false;
+        ctx.strokeStyle = "#000";
+
+        canvas.addEventListener("mousedown", e => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
+        canvas.addEventListener("mousemove", e => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } });
+        canvas.addEventListener("mouseup", () => { drawing = false; saveSignatures(); });
+        canvas.addEventListener("mouseout", () => { drawing = false; });
+      });
+    }
+
+    function saveSignatures() {
+      const dateStr = formatDate(currentDate);
+      const key = "signatures_" + dateStr;
+      const signs = {};
+      document.querySelectorAll("canvas").forEach(canvas => {
+        signs[canvas.dataset.typ] = canvas.toDataURL();
+      });
+      localStorage.setItem(key, JSON.stringify(signs));
+    }
+
+    function prevDay() {
+      currentDate.setDate(currentDate.getDate() - 1);
+      updateDateDisplay();
+      loadPlan(formatDate(currentDate));
+    }
+
+    function nextDay() {
+      currentDate.setDate(currentDate.getDate() + 1);
+      updateDateDisplay();
+      loadPlan(formatDate(currentDate));
+    }
+
+    function showAdminLogin() {
+      const pw = prompt("Passwort für Admin?");
+      if (pw === adminPassword) {
+        document.getElementById("adminPanel").classList.remove("hidden");
+        document.getElementById("overlay").classList.remove("hidden");
+        loadAdminDay();
+      } else {
+        alert("Falsches Passwort");
+      }
+    }
+
+    function closeAdmin() {
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("overlay").classList.add("hidden");
+    }
+
+    function switchAdminDay(delta) {
+      adminDay = (adminDay + delta + 31) % 31;
+      loadAdminDay();
+    }
+
+    function loadAdminDay() {
+      const key = "plan_0000-01-" + String(adminDay + 1).padStart(2, '0');
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      document.getElementById("adminDayInfo").textContent = `Tag ${adminDay + 1} / 31`;
       document.getElementById("frueh").value = data.frueh || "";
       document.getElementById("tag").value = data.tag || "";
       document.getElementById("spaet").value = data.spaet || "";
+
+      document.getElementById("frueh").oninput = saveAdminDay;
+      document.getElementById("tag").oninput = saveAdminDay;
+      document.getElementById("spaet").oninput = saveAdminDay;
     }
 
-    function saveDayAuto() {
-      const key = "plan_" + ("0000-01-" + String(adminDay + 1).padStart(2, '0'));
+    function saveAdminDay() {
+      const key = "plan_0000-01-" + String(adminDay + 1).padStart(2, '0');
       const data = {
         frueh: document.getElementById("frueh").value,
         tag: document.getElementById("tag").value,
@@ -64,10 +145,7 @@
       localStorage.setItem(key, JSON.stringify(data));
     }
 
-    document.getElementById("frueh").addEventListener("input", saveDayAuto);
-    document.getElementById("tag").addEventListener("input", saveDayAuto);
-    document.getElementById("spaet").addEventListener("input", saveDayAuto);
-
-    loadDay();
+    updateDateDisplay();
+    loadPlan(formatDate(currentDate));
   </script></body>
 </html>
