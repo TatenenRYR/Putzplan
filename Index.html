@@ -12,8 +12,10 @@
     .controls { text-align: center; margin: 1rem 0; }
     .admin-link { text-align: center; margin-top: 2rem; }
     .hidden { display: none; }
-    #adminPanel { position: fixed; top: 10%; left: 10%; right: 10%; background: white; padding: 1rem; box-shadow: 0 0 10px #0003; border-radius: 10px; z-index: 10; }
+    #adminPanel { position: fixed; top: 10%; left: 10%; right: 10%; background: white; padding: 1rem; box-shadow: 0 0 10px #0003; border-radius: 10px; z-index: 10; max-height: 80%; overflow-y: auto; }
     #overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 5; }
+    .task-list { margin-bottom: 1rem; }
+    .task-list textarea { width: 100%; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -34,13 +36,17 @@
     </div>
     <div>
       <h3>Frühdienst</h3>
-      <textarea id="frueh"></textarea>
-      <h3>Tagdienst</h3>
-      <textarea id="tag"></textarea>
-      <h3>Spätdienst</h3>
-      <textarea id="spaet"></textarea>
-    </div>
-    <button onclick="closeAdmin()">Schließen</button>
+      <div id="frueh" class="task-list"></div>
+      <button onclick="addTask('frueh')">+ Aufgabe hinzufügen</button><h3>Tagdienst</h3>
+  <div id="tag" class="task-list"></div>
+  <button onclick="addTask('tag')">+ Aufgabe hinzufügen</button>
+
+  <h3>Spätdienst</h3>
+  <div id="spaet" class="task-list"></div>
+  <button onclick="addTask('spaet')">+ Aufgabe hinzufügen</button>
+</div>
+<button onclick="closeAdmin()">Schließen</button>
+
   </div>  <script>
     let currentDate = new Date();
     let adminDay = 0;
@@ -66,7 +72,8 @@
       ["frueh", "tag", "spaet"].forEach((typ) => {
         const div = document.createElement("div");
         div.className = "day";
-        div.innerHTML = `<h2>${typ.charAt(0).toUpperCase() + typ.slice(1)}dienst</h2><p>${data[typ] || ''}</p><canvas width="300" height="50" data-typ="${typ}"></canvas>`;
+        const aufgaben = (data[typ] || []).map(a => `<li>${a}</li>`).join('');
+        div.innerHTML = `<h2>${typ.charAt(0).toUpperCase() + typ.slice(1)}dienst</h2><ul>${aufgaben}</ul><canvas width="300" height="50" data-typ="${typ}"></canvas>`;
         content.appendChild(div);
       });
 
@@ -163,24 +170,35 @@
     function loadAdminDay() {
       const key = "plan_0000-01-" + String(adminDay + 1).padStart(2, '0');
       const data = JSON.parse(localStorage.getItem(key) || '{}');
-      document.getElementById("adminDayInfo").textContent = `Tag ${adminDay + 1} / 31`;
-      document.getElementById("frueh").value = data.frueh || "";
-      document.getElementById("tag").value = data.tag || "";
-      document.getElementById("spaet").value = data.spaet || "";
+      ["frueh", "tag", "spaet"].forEach(id => {
+        const container = document.getElementById(id);
+        container.innerHTML = '';
+        (data[id] || []).forEach(text => {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.oninput = saveAdminDay;
+          container.appendChild(ta);
+        });
+      });
+    }
 
-      document.getElementById("frueh").oninput = saveAdminDay;
-      document.getElementById("tag").oninput = saveAdminDay;
-      document.getElementById("spaet").oninput = saveAdminDay;
+    function addTask(type) {
+      const container = document.getElementById(type);
+      const ta = document.createElement("textarea");
+      ta.oninput = saveAdminDay;
+      container.appendChild(ta);
+      saveAdminDay();
     }
 
     function saveAdminDay() {
       const key = "plan_0000-01-" + String(adminDay + 1).padStart(2, '0');
-      const data = {
-        frueh: document.getElementById("frueh").value,
-        tag: document.getElementById("tag").value,
-        spaet: document.getElementById("spaet").value
-      };
+      const data = {};
+      ["frueh", "tag", "spaet"].forEach(id => {
+        const texts = [...document.getElementById(id).querySelectorAll("textarea")].map(el => el.value).filter(v => v.trim());
+        data[id] = texts;
+      });
       localStorage.setItem(key, JSON.stringify(data));
+      if (formatDate(currentDate).endsWith(String(adminDay + 1).padStart(2, '0'))) loadPlan(formatDate(currentDate));
     }
 
     updateDateDisplay();
