@@ -1,230 +1,267 @@
-<style>
-  /* Bestehendes Design bleibt erhalten, nur leichte Anpassungen für vertikale Anzeige */
-
-  #dayContainer {
-    max-width: 800px;
-    margin: auto;
-    background-color: #e8f5e9; /* sanftes Grün */
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  }
-
-  .shift-section {
-    background: #c8e6c9; /* leicht dunkleres Grün */
-    margin-bottom: 20px;
-    padding: 15px;
-    border-radius: 6px;
-  }
-
-  .shift-section h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #2e7d32;
-  }
-
-  .task {
-    background: white;
-    border: 1px solid #a5d6a7;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-    position: relative;
-  }
-
-  .task input[type="text"] {
-    width: 80%;
-    border: none;
-    background: transparent;
-    font-size: 16px;
-    color: #1b5e20;
-  }
-
-  .task .sign-icon {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    cursor: pointer;
-  }
-
-  .task-list {
-    max-height: 250px;
-    overflow-y: auto;
-  }
-
-  button.add-task-btn {
-    background-color: #4caf50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    cursor: pointer;
-    margin-top: 5px;
-  }
-
-  button.add-task-btn:hover {
-    background-color: #388e3c;
-  }
-</style>
-
-<div id="dayContainer">
-  <div class="shift-section" id="frueh">
-    <h3>Frühdienst</h3>
-    <div class="task-list" id="frueh-tasks"></div>
-    <button class="add-task-btn" onclick="addTask('frueh-tasks')">+ Aufgabe hinzufügen</button>
-  </div>
-
-  <div class="shift-section" id="tag">
-    <h3>Tagdienst</h3>
-    <div class="task-list" id="tag-tasks"></div>
-    <button class="add-task-btn" onclick="addTask('tag-tasks')">+ Aufgabe hinzufügen</button>
-  </div>
-
-  <div class="shift-section" id="spaet">
-    <h3>Spätdienst</h3>
-    <div class="task-list" id="spaet-tasks"></div>
-    <button class="add-task-btn" onclick="addTask('spaet-tasks')">+ Aufgabe hinzufügen</button>
-  </div>
-</div>
-
-<div id="signaturePopup" class="signature-popup" style="display:none;">
-  <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
-  <br>
-  <button onclick="saveSignature()">Speichern</button>
-  <button onclick="closeSignaturePopup()">Abbrechen</button>
-</div>
-
-<script>
-  let currentTaskId = null;
-  let isDrawing = false;
-  let lastX = 0;
-  let lastY = 0;
-  const canvas = document.getElementById('signatureCanvas');
-  const ctx = canvas.getContext('2d');
-
-  // Funktion um Aufgabe hinzuzufügen in jeweilige Schicht-Liste
-  function addTask(taskListId) {
-    const taskList = document.getElementById(taskListId);
-    const taskId = 'task-' + Date.now();
-
-    const taskDiv = document.createElement('div');
-    taskDiv.classList.add('task');
-    taskDiv.id = taskId;
-
-    // Inputfeld für Aufgabenname, der später gespeichert wird
-    taskDiv.innerHTML = `
-      <input type="text" placeholder="Aufgabe eingeben" oninput="saveTaskText('${taskId}', this.value)" />
-      <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${taskId}')">🖊️</span>
-      <div class="signature-image" style="margin-top:5px;"></div>
-    `;
-
-    taskList.appendChild(taskDiv);
-    loadTaskText(taskId);
-    loadSignature(taskId);
-  }
-
-  // Aufgabe-Text speichern
-  function saveTaskText(taskId, text) {
-    localStorage.setItem('tasktext_' + taskId, text);
-  }
-
-  // Aufgabe-Text laden
-  function loadTaskText(taskId) {
-    const taskDiv = document.getElementById(taskId);
-    if (!taskDiv) return;
-    const input = taskDiv.querySelector('input[type=text]');
-    if (!input) return;
-    const savedText = localStorage.getItem('tasktext_' + taskId);
-    if (savedText) input.value = savedText;
-  }
-
-  // Öffnet das Unterschriftsfenster
-  function openSignaturePopup(taskId) {
-    currentTaskId = taskId;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    document.getElementById('signaturePopup').style.display = 'block';
-  }
-
-  function closeSignaturePopup() {
-    document.getElementById('signaturePopup').style.display = 'none';
-    currentTaskId = null;
-  }
-
-  // Zeichnen im Canvas (Mouse)
-  canvas.addEventListener('mousedown', (e) => {
-    isDrawing = true;
-    lastX = e.offsetX;
-    lastY = e.offsetY;
-  });
-
-  canvas.addEventListener('mousemove', (e) => {
-    if (!isDrawing) return;
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    lastX = e.offsetX;
-    lastY = e.offsetY;
-  });
-
-  canvas.addEventListener('mouseup', () => {
-    isDrawing = false;
-  });
-
-  canvas.addEventListener('mouseout', () => {
-    isDrawing = false;
-  });
-
-  // Zeichnen im Canvas (Touch)
-  canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    isDrawing = true;
-    const rect = canvas.getBoundingClientRect();
-    lastX = e.touches[0].clientX - rect.left;
-    lastY = e.touches[0].clientY - rect.top;
-  }, { passive: false });
-
-  canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (!isDrawing) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    const y = e.touches[0].clientY - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    lastX = x;
-    lastY = y;
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', () => {
-    isDrawing = false;
-  });
-
-  // Signatur speichern
-  function saveSignature() {
-    if (!currentTaskId) return;
-    const dataURL = canvas.toDataURL();
-    localStorage.setItem('signature_' + currentTaskId, dataURL);
-    loadSignature(currentTaskId);
-    closeSignaturePopup();
-  }
-
-  // Signatur laden
-  function loadSignature(taskId) {
-    const dataURL = localStorage.getItem('signature_' + taskId);
-    if (dataURL) {
-      const taskDiv = document.getElementById(taskId);
-      if (!taskDiv) return;
-      let imgDiv = taskDiv.querySelector('.signature-image');
-      if (!imgDiv) {
-        imgDiv = document.createElement('div');
-        imgDiv.className = 'signature-image';
-        taskDiv.appendChild(imgDiv);
-      }
-      imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;">`;
+<!DOCTYPE html><html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Putzplan</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: #e6f2e6;
     }
-  }
-</script>
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2e7d32;
+      color: white;
+      padding: 10px 20px;
+    }
+    .header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .header .date-display {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .header #adminToggle {
+      background-color: #388e3c;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .book-view {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 10px;
+    }
+    .shift-section {
+      background: #c8e6c9;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 6px;
+    }
+    .shift-section h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #2e7d32;
+    }
+    .task-list {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    .task {
+      background: white;
+      border: 1px solid #a5d6a7;
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 10px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .task input[type="text"] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      color: #1b5e20;
+    }
+    .task input[type="text"]:read-only {
+      color: #555;
+    }
+    .sign-icon {
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .signature-image img {
+      max-width: 100%;
+      max-height: 80px;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+    }
+    .admin-controls {
+      margin-top: 10px;
+      text-align: right;
+    }
+    .admin-controls.hidden {
+      display: none;
+    }
+    .add-task-btn {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .add-task-btn:hover {
+      background-color: #388e3c;
+    }
+    .signature-popup {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border: 1px solid #666;
+      padding: 10px;
+      z-index: 1000;
+      border-radius: 6px;
+    }
+    .signature-popup.hidden {
+      display: none;
+    }
+    .signature-canvas {
+      border: 1px solid #000;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button onclick="prevDay()">◀</button>
+    <div class="date-display" id="dateDisplay"></div>
+    <button onclick="nextDay()">▶</button>
+    <button id="adminToggle" onclick="toggleAdmin()">Administration</button>
+  </div>  <div class="book-view">
+    <div class="shift-section" id="frueh-section">
+      <h3>Frühdienst</h3>
+      <div class="task-list" id="frueh-tasks"></div>
+      <div class="admin-controls hidden" id="frueh-controls">
+        <button class="add-task-btn" onclick="addTask('frueh-tasks')">+ Aufgabe hinzufügen</button>
+      </div>
+    </div>
+    <div class="shift-section" id="tag-section">
+      <h3>Tagdienst</h3>
+      <div class="task-list" id="tag-tasks"></div>
+      <div class="admin-controls hidden" id="tag-controls">
+        <button class="add-task-btn" onclick="addTask('tag-tasks')">+ Aufgabe hinzufügen</button>
+      </div>
+    </div>
+    <div class="shift-section" id="spaet-section">
+      <h3>Spätdienst</h3>
+      <div class="task-list" id="spaet-tasks"></div>
+      <div class="admin-controls hidden" id="spaet-controls">
+        <button class="add-task-btn" onclick="addTask('spaet-tasks')">+ Aufgabe hinzufügen</button>
+      </div>
+    </div>
+  </div>  <div id="signaturePopup" class="signature-popup hidden">
+    <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
+    <br>
+    <button onclick="saveSignature()">Speichern</button>
+    <button onclick="closeSignaturePopup()">Abbrechen</button>
+  </div>  <script>
+    let currentDate = new Date();
+    let isAdmin = false;
+    let currentTaskId = null;
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = 2;
+
+    function formatDateKey(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function updateDateDisplay() {
+      document.getElementById('dateDisplay').textContent = currentDate.toLocaleDateString('de-DE');
+      renderTasks();
+    }
+
+    function prevDay() {
+      currentDate.setDate(currentDate.getDate() - 1);
+      updateDateDisplay();
+    }
+    function nextDay() {
+      currentDate.setDate(currentDate.getDate() + 1);
+      updateDateDisplay();
+    }
+
+    function toggleAdmin() {
+      isAdmin = !isAdmin;
+      document.querySelectorAll('.admin-controls').forEach(c => c.classList.toggle('hidden', !isAdmin));
+      document.querySelectorAll('.task-list input').forEach(input => input.readOnly = !isAdmin);
+    }
+
+    function addTask(listId) {
+      const key = formatDateKey(currentDate);
+      const tasks = JSON.parse(localStorage.getItem('tasks_' + key)) || { frueh: [], tag: [], spaet: [] };
+      const section = listId.split('-')[0];
+      tasks[section].push('Neue Aufgabe');
+      localStorage.setItem('tasks_' + key, JSON.stringify(tasks));
+      renderTasks();
+    }
+
+    function saveTasks() {
+      const key = formatDateKey(currentDate);
+      const sections = ['frueh', 'tag', 'spaet'];
+      const tasks = {};
+      sections.forEach(sec => {
+        tasks[sec] = Array.from(document.getElementById(sec + '-tasks').children)
+          .map(div => div.querySelector('input').value);
+      });
+      localStorage.setItem('tasks_' + key, JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      const key = formatDateKey(currentDate);
+      const data = JSON.parse(localStorage.getItem('tasks_' + key)) || { frueh: [], tag: [], spaet: [] };
+      ['frueh', 'tag', 'spaet'].forEach(sec => {
+        const container = document.getElementById(sec + '-tasks');
+        const controls = document.getElementById(sec + '-controls');
+        container.innerHTML = '';
+        data[sec].forEach((txt, i) => {
+          const id = key + '_' + sec + '_' + i;
+          const div = document.createElement('div');
+          div.className = 'task'; div.id = id;
+          div.innerHTML = `
+            <input type="text" value="${txt}" ${isAdmin ? '' : 'readonly'} onchange="saveTasks()" />
+            <span class="sign-icon" onclick="openSignaturePopup('${id}')">🖊️</span>
+            <div class="signature-image"></div>
+          `;
+          container.appendChild(div);
+          loadSignature(id);
+        });
+      });
+    }
+
+    function openSignaturePopup(taskId) {
+      currentTaskId = taskId;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('signaturePopup').classList.remove('hidden');
+    }
+    function closeSignaturePopup() {
+      document.getElementById('signaturePopup').classList.add('hidden');
+    }
+
+    let isDrawing = false, lastX = 0, lastY = 0;
+    canvas.addEventListener('pointerdown', e => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; });
+    canvas.addEventListener('pointermove', e => { if (!isDrawing) return; ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(e.offsetX,e.offsetY); ctx.stroke(); [lastX,lastY] = [e.offsetX,e.offsetY]; });
+    canvas.addEventListener('pointerup', () => isDrawing = false);
+    canvas.addEventListener('pointerout', () => isDrawing = false);
+
+    function saveSignature() {
+      if (!currentTaskId) return;
+      localStorage.setItem('signature_' + currentTaskId, canvas.toDataURL());
+      loadSignature(currentTaskId);
+      closeSignaturePopup();
+    }
+
+    function loadSignature(taskId) {
+      const dataURL = localStorage.getItem('signature_' + taskId);
+      if (dataURL) {
+        const div = document.getElementById(taskId).querySelector('.signature-image');
+        div.innerHTML = `<img src="${dataURL}" alt="Unterschrift">`;
+      }
+    }
+
+    // Initialisierung
+    updateDateDisplay();
+  </script></body>
+</html>
