@@ -17,113 +17,81 @@
     .nav-btn { background-color: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
     .admin-link { text-align: center; margin-top: 1rem; }
     .admin-link a { color: #007bff; text-decoration: underline; cursor: pointer; }
-    #adminModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; }
+    #adminModal, #signatureModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; }
     .modal-content { background: white; padding: 1rem; border-radius: 10px; width: 90%; max-width: 600px; }
     .modal-content textarea { width: 100%; height: 60px; margin-bottom: 0.5rem; }
     .day-switch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
     #progressBar { margin-top: 1rem; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; }
     #progressFill { height: 100%; background: #4caf50; width: 0; transition: width 0.3s ease-in-out; }
     .lang-select { margin-bottom: 1rem; text-align: center; }
+    canvas { border: 1px solid #ccc; touch-action: none; }
   </style>
 </head>
 <body>
-  <div class="lang-select">
-    <label>Sprache: 
-      <select id="languageSelect" onchange="changeLanguage()">
-        <option value="de">Deutsch</option>
-        <option value="en">English</option>
-      </select>
-    </label>
-  </div>
-  <h1 data-i18n="title">Putzplan - Schnitzelwelt Neuenhaus</h1>
-  <div class="date-nav">
-    <button class="nav-btn" onclick="changeDay(-1)" data-i18n="prev">&lt; vorheriger Tag</button>
-    <div class="date-display" id="currentDate"></div>
-    <button class="nav-btn" onclick="changeDay(1)" data-i18n="next">nächster Tag &gt;</button>
-  </div>  <div class="section">
-    <h2 data-i18n="morning">Frühschicht</h2>
-    <ul id="frueh"></ul>
-  </div>  <div class="section">
-    <h2 data-i18n="day">Tagschicht</h2>
-    <ul id="tag"></ul>
-  </div>  <div class="section">
-    <h2 data-i18n="evening">Spätschicht</h2>
-    <ul id="spaet"></ul>
-  </div>  <div id="progressBar"><div id="progressFill"></div></div><button class="btn" id="submitBtn" onclick="submitPlan()" data-i18n="submit">Plan abschicken</button>
-
-  <div class="admin-link">
-    <a onclick="openAdmin()" data-i18n="admin">Administrator: Aufgaben bearbeiten</a>
-  </div>  <div id="adminModal">
+  <!-- ... (Rest unchanged until script) ... -->  <!-- Signature Modal -->  <div id="signatureModal">
     <div class="modal-content">
-      <div class="day-switch">
-        <button class="nav-btn" onclick="switchAdminDay(-1)">&lt;</button>
-        <span id="adminDayDisplay">Tag 1</span>
-        <button class="nav-btn" onclick="switchAdminDay(1)">&gt;</button>
-      </div>
-      <p><strong data-i18n="morning">Frühschicht</strong></p>
-      <textarea id="fruehEdit"></textarea>
-      <p><strong data-i18n="day">Tagschicht</strong></p>
-      <textarea id="tagEdit"></textarea>
-      <p><strong data-i18n="evening">Spätschicht</strong></p>
-      <textarea id="spaetEdit"></textarea>
-      <button class="btn" onclick="saveAdmin()" data-i18n="save">Speichern</button>
-      <button class="btn" style="background:#999" onclick="closeAdmin()" data-i18n="cancel">Abbrechen</button>
+      <p>Unterschrift eingeben:</p>
+      <canvas id="signaturePad" width="500" height="200"></canvas>
+      <button class="btn" onclick="saveSignature()">Speichern</button>
+      <button class="btn" style="background:#999" onclick="closeSignatureModal()">Abbrechen</button>
     </div>
   </div>  <script>
-    let offset = 0;
-    let adminDay = 1;
-    const translations = {
-      en: {
-        title: "Cleaning Plan - Schnitzelwelt Neuenhaus",
-        prev: "< previous day",
-        next: "next day >",
-        morning: "Morning shift",
-        day: "Day shift",
-        evening: "Evening shift",
-        submit: "Submit Plan",
-        admin: "Administrator: Edit tasks",
-        save: "Save",
-        cancel: "Cancel"
-      },
-      de: {
-        title: "Putzplan - Schnitzelwelt Neuenhaus",
-        prev: "< vorheriger Tag",
-        next: "nächster Tag >",
-        morning: "Frühschicht",
-        day: "Tagschicht",
-        evening: "Spätschicht",
-        submit: "Plan abschicken",
-        admin: "Administrator: Aufgaben bearbeiten",
-        save: "Speichern",
-        cancel: "Abbrechen"
-      }
-    };
+    let currentSignTarget = null;
+    const canvas = document.getElementById("signaturePad");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+    let offsetX, offsetY;
 
-    function changeLanguage() {
-      const lang = document.getElementById("languageSelect").value;
-      document.querySelectorAll("[data-i18n]").forEach(el => {
-        const key = el.getAttribute("data-i18n");
-        el.textContent = translations[lang][key];
-      });
+    function openSignatureModal(sigKey, dayKey) {
+      currentSignTarget = { sigKey, dayKey };
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById("signatureModal").style.display = "flex";
     }
 
-    function getDayOffsetDate() {
-      const today = new Date();
-      today.setDate(today.getDate() + offset);
-      return today;
+    function closeSignatureModal() {
+      document.getElementById("signatureModal").style.display = "none";
     }
 
-    function updateDateDisplay() {
-      const date = getDayOffsetDate();
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById("currentDate").textContent = date.toLocaleDateString("de-DE", options);
-    }
-
-    function changeDay(val) {
-      offset += val;
+    function saveSignature() {
+      const dataURL = canvas.toDataURL();
+      const stored = JSON.parse(localStorage.getItem(currentSignTarget.dayKey) || '{}');
+      stored[currentSignTarget.sigKey] = dataURL;
+      localStorage.setItem(currentSignTarget.dayKey, JSON.stringify(stored));
+      closeSignatureModal();
       renderPlan();
     }
 
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("mouseout", endDraw);
+
+    canvas.addEventListener("touchstart", e => startDraw(e.touches[0]));
+    canvas.addEventListener("touchmove", e => {
+      draw(e.touches[0]);
+      e.preventDefault();
+    });
+    canvas.addEventListener("touchend", endDraw);
+
+    function startDraw(e) {
+      offsetX = canvas.offsetLeft;
+      offsetY = canvas.offsetTop;
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.clientX - offsetX, e.clientY - offsetY);
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+      ctx.lineTo(e.clientX - offsetX, e.clientY - offsetY);
+      ctx.stroke();
+    }
+
+    function endDraw() {
+      drawing = false;
+    }
+
+    // Replace prompt part in renderPlan()
     function renderPlan() {
       updateDateDisplay();
       const dayKey = "plan_" + getDayOffsetDate().toISOString().slice(0, 10);
@@ -139,20 +107,20 @@
           sign.className = "sign";
           const sigKey = `${id}_sig_${i}`;
           const sigVal = data[sigKey] || "";
-          if (sigVal) {
+
+          if (sigVal.startsWith("data:image")) {
+            const img = document.createElement("img");
+            img.src = sigVal;
+            img.alt = "Unterschrift";
+            img.style.height = "30px";
             sign.classList.add("filled");
-            sign.textContent = ` - ${sigVal}`;
+            sign.textContent = '';
+            sign.appendChild(img);
           } else {
             sign.textContent = " - klicken zum Unterschreiben";
-            sign.onclick = () => {
-              const name = prompt("Unterschrift (Name):");
-              if (name) {
-                data[sigKey] = name;
-                localStorage.setItem(dayKey, JSON.stringify(data));
-                renderPlan();
-              }
-            };
+            sign.onclick = () => openSignatureModal(sigKey, dayKey);
           }
+
           li.textContent = task;
           li.appendChild(sign);
           container.appendChild(li);
@@ -160,74 +128,5 @@
       });
       updateProgress();
     }
-
-    function submitPlan() {
-      alert("Plan gespeichert.");
-    }
-
-    function updateProgress() {
-      const total = document.querySelectorAll('.sign').length;
-      const signed = document.querySelectorAll('.sign.filled').length;
-      const percent = total === 0 ? 0 : Math.round((signed / total) * 100);
-      document.getElementById('progressFill').style.width = percent + '%';
-    }
-
-    function openAdmin() {
-      document.getElementById("adminModal").style.display = "flex";
-      loadAdmin();
-    }
-
-    function closeAdmin() {
-      document.getElementById("adminModal").style.display = "none";
-    }
-
-    function loadAdmin() {
-      document.getElementById("adminDayDisplay").textContent = "Tag " + adminDay;
-      const key = "admin_" + adminDay;
-      const stored = JSON.parse(localStorage.getItem(key) || '{}');
-      document.getElementById("fruehEdit").value = stored.frueh || "";
-      document.getElementById("tagEdit").value = stored.tag || "";
-      document.getElementById("spaetEdit").value = stored.spaet || "";
-    }
-
-    function saveAdmin() {
-      const key = "admin_" + adminDay;
-      const data = {
-        frueh: document.getElementById("fruehEdit").value,
-        tag: document.getElementById("tagEdit").value,
-        spaet: document.getElementById("spaetEdit").value
-      };
-      localStorage.setItem(key, JSON.stringify(data));
-      closeAdmin();
-    }
-
-    function switchAdminDay(val) {
-      adminDay += val;
-      if (adminDay < 1) adminDay = 1;
-      if (adminDay > 31) adminDay = 31;
-      loadAdmin();
-    }
-
-    function applyAdminTasks() {
-      const date = getDayOffsetDate();
-      const day = date.getDate();
-      const key = "admin_" + day;
-      const tasks = JSON.parse(localStorage.getItem(key) || '{}');
-      const dayKey = "plan_" + date.toISOString().slice(0, 10);
-      const existing = JSON.parse(localStorage.getItem(dayKey) || '{}');
-
-      ["frueh", "tag", "spaet"].forEach(id => {
-        if (!existing[id] && tasks[id]) {
-          existing[id] = tasks[id];
-        }
-      });
-      localStorage.setItem(dayKey, JSON.stringify(existing));
-    }
-
-    window.onload = () => {
-      changeLanguage();
-      applyAdminTasks();
-      renderPlan();
-    };
   </script></body>
 </html>
