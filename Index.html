@@ -2,171 +2,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Putzplan App</title>
+  <title>Admin - Putzplan</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; background-color: #f0f0f0; }
-    h1, h2 { text-align: center; }
-    .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .date-display { font-weight: bold; }
-    .section { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-    ul { list-style: none; padding: 0; }
-    li { padding: 0.5rem; border-bottom: 1px solid #ddd; }
-    .sign { font-style: italic; color: #999; margin-left: 1rem; white-space: nowrap; cursor: pointer; display: inline-block; vertical-align: middle; }
-    .sign img { height: 30px; vertical-align: middle; }
-    .sign.filled { color: #4caf50; font-style: normal; }
-    .btn { display: block; margin: 1rem auto; padding: 0.5rem 1rem; font-size: 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .nav-btn { background-color: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
-    .admin-link { text-align: center; margin-top: 2rem; }
-    .admin-link a { color: #007bff; text-decoration: underline; cursor: pointer; font-size: 1.1rem; }
-    #signatureModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 999; }
-    .modal-content { background: white; padding: 1rem; border-radius: 10px; width: 90%; max-width: 600px; }
-    canvas { border: 1px solid #ccc; width: 100%; height: 200px; touch-action: none; display: block; margin-bottom: 1rem; }
+    body { font-family: sans-serif; padding: 1rem; background-color: #f9f9f9; }
+    h1 { text-align: center; }
+    .day { background: white; margin-bottom: 1rem; padding: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .day h2 { margin-top: 0; }
+    textarea { width: 100%; height: 60px; margin-bottom: 0.5rem; border: 1px solid #ccc; border-radius: 5px; padding: 0.5rem; }
+    .btn { padding: 0.5rem 1rem; background-color: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .nav { text-align: center; margin: 1rem 0; }
+    .nav button { margin: 0 0.5rem; padding: 0.5rem; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    .info { text-align: center; margin-bottom: 1rem; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Putzplan</h1>
-  <div class="date-nav">
-    <button class="nav-btn" onclick="changeDay(-1)">◀</button>
-    <div class="date-display" id="dateDisplay"></div>
-    <button class="nav-btn" onclick="changeDay(1)">▶</button>
-  </div>  <div class="section">
+  <h1>Administration Putzplan</h1>
+  <div class="info">Tag: <span id="dayInfo"></span></div>
+  <div class="nav">
+    <button onclick="switchDay(-1)">◀ Vorheriger</button>
+    <button onclick="switchDay(1)">Nächster ▶</button>
+  </div>  <div class="day">
     <h2>Frühdienst</h2>
-    <ul id="frueh"></ul>
+    <textarea id="frueh"></textarea>
   </div>
-  <div class="section">
+  <div class="day">
     <h2>Tagdienst</h2>
-    <ul id="tag"></ul>
+    <textarea id="tag"></textarea>
   </div>
-  <div class="section">
+  <div class="day">
     <h2>Spätdienst</h2>
-    <ul id="spaet"></ul>
-  </div>  <div class="admin-link">
-    <a href="admin.html">Zur Administration</a>
-  </div>  <!-- Signature Modal -->  <div id="signatureModal">
-    <div class="modal-content">
-      <p>Unterschrift eingeben:</p>
-      <canvas id="signaturePad"></canvas>
-      <button class="btn" onclick="saveSignature()">Speichern</button>
-      <button class="btn" style="background:#999" onclick="closeSignatureModal()">Abbrechen</button>
-    </div>
+    <textarea id="spaet"></textarea>
   </div>  <script>
-    let dayOffset = 0;
-    let currentSignTarget = null;
+    let adminDay = 0;
+    const adminPasswort = "admin123"; // Beispiel Passwort
 
-    const canvas = document.getElementById("signaturePad");
-    const ctx = canvas.getContext("2d");
-    let drawing = false;
-
-    function getDayOffsetDate() {
-      const date = new Date();
-      date.setDate(date.getDate() + dayOffset);
-      return date;
+    function updateDayInfo() {
+      document.getElementById("dayInfo").textContent = `Tag ${adminDay + 1} / 31`;
     }
 
-    function updateDateDisplay() {
-      const date = getDayOffsetDate();
-      document.getElementById("dateDisplay").textContent = date.toLocaleDateString();
+    function switchDay(delta) {
+      adminDay = (adminDay + delta + 31) % 31;
+      loadDay();
     }
 
-    function changeDay(offset) {
-      dayOffset += offset;
-      renderPlan();
+    function loadDay() {
+      updateDayInfo();
+      const key = "plan_" + ("0000-01-" + String(adminDay + 1).padStart(2, '0'));
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      document.getElementById("frueh").value = data.frueh || "";
+      document.getElementById("tag").value = data.tag || "";
+      document.getElementById("spaet").value = data.spaet || "";
     }
 
-    function renderPlan() {
-      updateDateDisplay();
-      const dateKey = "plan_" + getDayOffsetDate().toISOString().slice(0, 10);
-      const data = JSON.parse(localStorage.getItem(dateKey) || '{}');
-      ["frueh", "tag", "spaet"].forEach(id => {
-        const container = document.getElementById(id);
-        container.innerHTML = '';
-        const tasks = (data[id] || '').split("\n");
-        tasks.forEach((task, i) => {
-          const li = document.createElement("li");
-          li.textContent = task;
-          const sign = document.createElement("span");
-          sign.className = "sign";
-          const sigKey = `${id}_sig_${i}`;
-          const sigVal = data[sigKey] || "";
-
-          if (sigVal.startsWith("data:image")) {
-            const img = document.createElement("img");
-            img.src = sigVal;
-            img.alt = "Unterschrift";
-            sign.classList.add("filled");
-            sign.appendChild(img);
-          } else {
-            sign.textContent = " ✍️";
-            sign.onclick = () => openSignatureModal(sigKey, dateKey);
-          }
-
-          li.appendChild(sign);
-          container.appendChild(li);
-        });
-      });
-    }
-
-    function openSignatureModal(sigKey, dayKey) {
-      currentSignTarget = { sigKey, dayKey };
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      document.getElementById("signatureModal").style.display = "flex";
-    }
-
-    function closeSignatureModal() {
-      document.getElementById("signatureModal").style.display = "none";
-    }
-
-    function saveSignature() {
-      const dataURL = canvas.toDataURL();
-      const stored = JSON.parse(localStorage.getItem(currentSignTarget.dayKey) || '{}');
-      stored[currentSignTarget.sigKey] = dataURL;
-      localStorage.setItem(currentSignTarget.dayKey, JSON.stringify(stored));
-      closeSignatureModal();
-      renderPlan();
-    }
-
-    function getCanvasCoords(e) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (e.clientX || e.touches[0].clientX) - rect.left,
-        y: (e.clientY || e.touches[0].clientY) - rect.top
+    function saveDayAuto() {
+      const key = "plan_" + ("0000-01-" + String(adminDay + 1).padStart(2, '0'));
+      const data = {
+        frueh: document.getElementById("frueh").value,
+        tag: document.getElementById("tag").value,
+        spaet: document.getElementById("spaet").value
       };
+      localStorage.setItem(key, JSON.stringify(data));
     }
 
-    canvas.addEventListener("mousedown", e => {
-      drawing = true;
-      const { x, y } = getCanvasCoords(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    });
+    document.getElementById("frueh").addEventListener("input", saveDayAuto);
+    document.getElementById("tag").addEventListener("input", saveDayAuto);
+    document.getElementById("spaet").addEventListener("input", saveDayAuto);
 
-    canvas.addEventListener("mousemove", e => {
-      if (!drawing) return;
-      const { x, y } = getCanvasCoords(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    });
-
-    canvas.addEventListener("mouseup", () => drawing = false);
-    canvas.addEventListener("mouseout", () => drawing = false);
-
-    canvas.addEventListener("touchstart", e => {
-      drawing = true;
-      const { x, y } = getCanvasCoords(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    });
-
-    canvas.addEventListener("touchmove", e => {
-      if (!drawing) return;
-      const { x, y } = getCanvasCoords(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      e.preventDefault();
-    });
-
-    canvas.addEventListener("touchend", () => drawing = false);
-
-    renderPlan();
+    loadDay();
   </script></body>
 </html>
