@@ -1,281 +1,342 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Putzplan Verwaltung</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f3fdf4;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #4caf50;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .date-nav {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-    }
-    .task-section {
-      padding: 10px;
-    }
-    .shift {
-      margin-bottom: 20px;
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .shift h3 {
-      margin-top: 0;
-    }
-    .task {
-      position: relative;
-      border: 1px solid #ccc;
-      margin-bottom: 5px;
-      padding: 5px;
-      border-radius: 5px;
-      background: #f9f9f9;
-    }
-    .task input {
-      border: none;
-      background: transparent;
-      width: 80%;
-    }
-    .sign-icon, .delete-icon {
-      cursor: pointer;
-      margin-left: 5px;
-    }
-    .admin-controls {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
-    }
-    #signaturePopup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 1px solid #ccc;
-      padding: 20px;
-      z-index: 1000;
-      display: none;
-    }
-    canvas {
-      border: 1px solid black;
-    }
-    .overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4);
-      display: none;
-      z-index: 999;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Putzplan</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #e8f5e9;
+    color: #2e7d32;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    background: #a5d6a7;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #1b5e20;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 600;
+    flex-wrap: wrap;
+  }
+  .date-nav button {
+    background: #2e7d32;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .date-nav button:disabled {
+    background: #9e9e9e;
+    cursor: default;
+  }
+  main {
+    flex: 1;
+    padding: 20px;
+    max-width: 960px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #a5d6a7aa;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+  }
+  section h2 {
+    margin-top: 0;
+    text-align: center;
+    color: #1b5e20;
+  }
+  .shift {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .task {
+    background: #c8e6c9;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .task input.title-input {
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: #1b5e20;
+    width: 100%;
+    outline: none;
+  }
+  .task input.title-input[readonly] {
+    cursor: default;
+  }
+  .task .buttons {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .sign-icon, .delete-icon {
+    cursor: pointer;
+    user-select: none;
+    font-size: 1.2rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: #81c784;
+    color: white;
+    transition: background-color 0.3s ease;
+    border: none;
+  }
+  .sign-icon:hover {
+    background: #4caf50;
+  }
+  .delete-icon:hover {
+    background: #d32f2f;
+  }
+  .delete-icon {
+    display: none;
+  }
+  .task.admin-active .delete-icon {
+    display: inline-block;
+  }
+  .signature-image img {
+    max-height: 60px;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    margin-top: 8px;
+  }
+  button.admin-only {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+    align-self: center;
+  }
+  button.admin-only:disabled {
+    background: #a5d6a7;
+    cursor: default;
+  }
+  button.admin-only:hover:not(:disabled) {
+    background: #1b5e20;
+  }
+  /* Signatur Popup */
+  .signature-popup {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #2e7d32;
+    border-radius: 10px;
+    padding: 15px;
+    z-index: 1100;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: none;
+    width: 320px;
+  }
+  .signature-popup h3 {
+    margin-top: 0;
+    color: #1b5e20;
+    text-align: center;
+  }
+  .signature-canvas {
+    border: 1px solid #4caf50;
+    border-radius: 6px;
+    width: 300px;
+    height: 150px;
+    touch-action: none;
+  }
+  .signature-popup label {
+    font-weight: 600;
+    margin-top: 10px;
+    display: block;
+  }
+  .signature-popup input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    margin-top: 4px;
+    border-radius: 6px;
+    border: 1px solid #4caf50;
+    font-size: 1rem;
+    outline: none;
+  }
+  .signature-popup button {
+    margin-top: 12px;
+    margin-right: 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    background: #2e7d32;
+    color: white;
+    transition: background-color 0.3s ease;
+  }
+  .signature-popup button:hover {
+    background: #1b5e20;
+  }
+  /* History Popup */
+  .history-popup {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #2e7d32;
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 1100;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    display: none;
+    max-height: 70vh;
+    width: 500px;
+    overflow-y: auto;
+  }
+  .history-popup h3 {
+    margin-top: 0;
+    color: #1b5e20;
+    text-align: center;
+  }
+  .history-popup button.close-history {
+    background: #d32f2f;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    float: right;
+    margin-top: -40px;
+    margin-right: -10px;
+  }
+  .history-list div {
+    border-bottom: 1px solid #a5d6a7;
+    padding: 6px 0;
+    font-size: 0.9rem;
+  }
+</style>
 </head>
 <body>
-  <div class="overlay" id="overlay"></div>
-  <header>
-    <button onclick="prevDay()">◀</button>
-    <div id="currentDate">Datum</div>
-    <button onclick="nextDay()">▶</button>
-    <button onclick="toggleAdmin()">Administration</button>
-  </header>  <div class="task-section">
-    <div class="shift" id="frueh">
-      <h3>Frühdienst</h3>
-      <div class="task-list" id="frueh-list"></div>
-      <button onclick="addTask('frueh')">+ Aufgabe hinzufügen</button>
-    </div>
-    <div class="shift" id="tag">
-      <h3>Tagdienst</h3>
-      <div class="task-list" id="tag-list"></div>
-      <button onclick="addTask('tag')">+ Aufgabe hinzufügen</button>
-    </div>
-    <div class="shift" id="spaet">
-      <h3>Spätdienst</h3>
-      <div class="task-list" id="spaet-list"></div>
-      <button onclick="addTask('spaet')">+ Aufgabe hinzufügen</button>
-    </div>
-  </div>  <div id="signaturePopup">
-    <canvas id="signatureCanvas" width="300" height="150"></canvas>
-    <br>
-    <button onclick="saveSignature()">Speichern</button>
-    <button onclick="closeSignaturePopup()">Abbrechen</button>
-  </div>  <script>
-    let currentDate = new Date();
-    let adminMode = false;
-    let currentTaskId = null;
-    const canvas = document.getElementById('signatureCanvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawing = false, lastX = 0, lastY = 0;
 
-    function formatDate(date) {
-      return date.toISOString().split('T')[0];
-    }
+<header>
+  <h1>Putzplan</h1>
+  <div class="date-nav">
+    <button id="prevDayBtn" title="Vortag">&lt;</button>
+    <div id="currentDateDisplay" aria-live="polite" style="min-width:120px; text-align:center; font-weight:700;"></div>
+    <button id="nextDayBtn" title="Nächster Tag">&gt;</button>
+    <button id="toggleAdminBtn" style="margin-left:20px;">Administration ein/aus</button>
+    <button id="openHistoryBtn">History</button>
+  </div>
+</header>
 
-    function updateDateDisplay() {
-      document.getElementById('currentDate').innerText = formatDate(currentDate);
-      loadTasks();
-    }
+<main>
+  <section>
+    <h2>Frühschicht</h2>
+    <div id="frueh" class="shift"></div>
+    <button class="admin-only" id="addFruehBtn" disabled>+ Aufgabe hinzufügen</button>
+  </section>
+  <section>
+    <h2>Tagsschicht</h2>
+    <div id="tag" class="shift"></div>
+    <button class="admin-only" id="addTagBtn" disabled>+ Aufgabe hinzufügen</button>
+  </section>
+  <section>
+    <h2>Spätschicht</h2>
+    <div id="spaet" class="shift"></div>
+    <button class="admin-only" id="addSpaetBtn" disabled>+ Aufgabe hinzufügen</button>
+  </section>
+</main>
 
-    function prevDay() {
-      currentDate.setDate(currentDate.getDate() - 1);
-      updateDateDisplay();
-    }
+<!-- Signatur Popup -->
+<div id="signaturePopup" class="signature-popup" role="dialog" aria-modal="true" aria-labelledby="signPopupTitle">
+  <h3 id="signPopupTitle">Unterschrift hinzufügen</h3>
+  <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
+  <label for="signerNameInput">Name der Person</label>
+  <input type="text" id="signerNameInput" autocomplete="off" />
+  <div style="text-align:center;">
+    <button id="saveSignBtn">Speichern</button>
+    <button id="closeSignBtn">Abbrechen</button>
+  </div>
+</div>
 
-    function nextDay() {
-      currentDate.setDate(currentDate.getDate() + 1);
-      updateDateDisplay();
-    }
+<!-- History Popup -->
+<div id="historyPopup" class="history-popup" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <h3 id="historyTitle">Unterschriften History</h3>
+  <button class="close-history" id="closeHistoryBtn" aria-label="History schließen">✖</button>
+  <div class="history-list" id="historyList"></div>
+</div>
 
-    function toggleAdmin() {
-      adminMode = !adminMode;
-      loadTasks();
-    }
+<script>
+  // Globals
+  let adminMode = false;
+  let currentDate = new Date();
+  currentDate.setHours(0,0,0,0);
+  const shifts = ['frueh', 'tag', 'spaet'];
+  let currentTaskId = null; // Für Signatur popup: {shift, taskId}
 
-    function addTask(shift) {
-      const id = 'task-' + Date.now();
-      const task = {
-        id,
-        text: 'Neue Aufgabe',
-        signature: null,
-        history: [],
-      };
-      const dayKey = formatDate(currentDate);
-      const tasks = JSON.parse(localStorage.getItem(dayKey)) || { frueh: [], tag: [], spaet: [] };
-      tasks[shift].push(task);
-      localStorage.setItem(dayKey, JSON.stringify(tasks));
-      loadTasks();
-    }
+  // DOM Elements
+  const currentDateDisplay = document.getElementById('currentDateDisplay');
+  const prevDayBtn = document.getElementById('prevDayBtn');
+  const nextDayBtn = document.getElementById('nextDayBtn');
+  const toggleAdminBtn = document.getElementById('toggleAdminBtn');
+  const addFruehBtn = document.getElementById('addFruehBtn');
+  const addTagBtn = document.getElementById('addTagBtn');
+  const addSpaetBtn = document.getElementById('addSpaetBtn');
 
-    function loadTasks() {
-      const shifts = ['frueh', 'tag', 'spaet'];
-      const dayKey = formatDate(currentDate);
-      const tasks = JSON.parse(localStorage.getItem(dayKey)) || { frueh: [], tag: [], spaet: [] };
+  const signaturePopup = document.getElementById('signaturePopup');
+  const signatureCanvas = document.getElementById('signatureCanvas');
+  const ctx = signatureCanvas.getContext('2d');
+  const signerNameInput = document.getElementById('signerNameInput');
+  const saveSignBtn = document.getElementById('saveSignBtn');
+  const closeSignBtn = document.getElementById('closeSignBtn');
 
-      shifts.forEach(shift => {
-        const list = document.getElementById(`${shift}-list`);
-        list.innerHTML = '';
-        tasks[shift].forEach(task => {
-          const div = document.createElement('div');
-          div.className = 'task';
+  const historyPopup = document.getElementById('historyPopup');
+  const openHistoryBtn = document.getElementById('openHistoryBtn');
+  const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+  const historyList = document.getElementById('historyList');
 
-          const input = document.createElement('input');
-          input.value = task.text;
-          input.disabled = !adminMode;
-          input.onchange = () => {
-            task.text = input.value;
-            localStorage.setItem(dayKey, JSON.stringify(tasks));
-          };
-          div.appendChild(input);
+  // Zeichnen Signatur Variablen
+  let isDrawing = false;
+  let lastX = 0;
+  let lastY = 0;
 
-          const signIcon = document.createElement('span');
-          signIcon.innerText = '🖊️';
-          signIcon.className = 'sign-icon';
-          signIcon.onclick = () => openSignaturePopup(shift, task);
-          div.appendChild(signIcon);
+  // Daten-Struktur:
+  // localStorage key: "putzplan"
+  // Inhalt: { "YYYY-MM-DD": { frueh: [ {id, title, signature, signerName, history[]}, ...], tag: [...], spaet: [...] } }
 
-          if (adminMode) {
-            const deleteIcon = document.createElement('span');
-            deleteIcon.innerText = '🗑️';
-            deleteIcon.className = 'delete-icon';
-            deleteIcon.onclick = () => {
-              if (confirm('Aufgabe löschen?')) {
-                tasks[shift] = tasks[shift].filter(t => t.id !== task.id);
-                localStorage.setItem(dayKey, JSON.stringify(tasks));
-                loadTasks();
-              }
-            };
-            div.appendChild(deleteIcon);
-          }
-
-          if (task.signature) {
-            const img = document.createElement('img');
-            img.src = task.signature;
-            img.style.maxHeight = '60px';
-            div.appendChild(img);
-          }
-
-          list.appendChild(div);
-        });
-      });
-    }
-
-    function openSignaturePopup(shift, task) {
-      currentTaskId = { shift, id: task.id };
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      document.getElementById('signaturePopup').style.display = 'block';
-      document.getElementById('overlay').style.display = 'block';
-    }
-
-    function closeSignaturePopup() {
-      currentTaskId = null;
-      document.getElementById('signaturePopup').style.display = 'none';
-      document.getElementById('overlay').style.display = 'none';
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-      isDrawing = true;
-      [lastX, lastY] = [e.offsetX, e.offsetY];
-    });
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isDrawing) return;
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.stroke();
-      [lastX, lastY] = [e.offsetX, e.offsetY];
-    });
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
-
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      [lastX, lastY] = [touch.clientX - rect.left, touch.clientY - rect.top];
-      isDrawing = true;
-    });
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (!isDrawing) return;
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const [x, y] = [touch.clientX - rect.left, touch.clientY - rect.top];
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      [lastX, lastY] = [x, y];
-    });
-    canvas.addEventListener('touchend', () => isDrawing = false);
-
-    function saveSignature() {
-      if (!currentTaskId) return;
-      const dataURL = canvas.toDataURL();
-      const dayKey = formatDate(currentDate);
-      const tasks = JSON.parse(localStorage.getItem(dayKey));
-      const taskList = tasks[currentTaskId.shift];
-      const task = taskList.find(t => t.id === currentTaskId.id);
-      if (task) {
-        task.signature = dataURL;
-        task.history.push({ date: new Date().toLocaleString() });
-        localStorage.setItem(dayKey, JSON.stringify(tasks));
-      }
-      closeSignaturePopup();
-      loadTasks();
-    }
-
-    updateDateDisplay();
-  </script></body>
-</html>
+  // --- Hilfsfunktionen ---
+  function formatDate(d) {
+    return d.toISOString().slice(0,10);
+  }
+  function formatDisplayDate(d) {
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year
