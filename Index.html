@@ -1,20 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Putzplan mit Unterschrift</title>
 <style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+  }
+  h2 {
+    margin-bottom: 0;
+  }
+  .nav-tabs {
+    margin: 10px 0 20px;
+    display: flex;
+    gap: 10px;
+  }
+  .nav-tabs button {
+    flex: 1;
+    padding: 8px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background: #eee;
+    border-radius: 4px;
+  }
+  .nav-tabs button.active {
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+  }
+  .task-list {
+    min-height: 80px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    background: #fafafa;
+  }
   .task {
     margin-bottom: 10px;
-    padding: 5px;
+    padding: 8px 40px 8px 8px;
     border: 1px solid #ccc;
+    border-radius: 4px;
     position: relative;
+    background: white;
   }
   .sign-icon {
     position: absolute;
-    right: 5px;
-    top: 5px;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    user-select: none;
+  }
+  .signature-image img {
+    max-height: 70px;
+    border: 1px solid #ccc;
+    margin-top: 6px;
+    border-radius: 4px;
+  }
+  button.add-task {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
     cursor: pointer;
   }
-  .signature-canvas {
-    border: 1px solid #000;
-    touch-action: none; /* Wichtig für Touchscreen */
+  button.add-task:hover {
+    background: #45a045;
   }
+  /* Signatur Popup */
   .signature-popup {
     position: fixed;
     top: 20%;
@@ -22,72 +82,130 @@
     transform: translateX(-50%);
     background: white;
     border: 1px solid #666;
-    padding: 10px;
-    z-index: 1000;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 10000;
+    border-radius: 8px;
   }
   .signature-popup button {
-    margin-top: 5px;
+    margin-top: 10px;
+    margin-right: 8px;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  canvas.signature-canvas {
+    border: 2px solid #333;
+    border-radius: 6px;
+    touch-action: none;
+    background: #fff;
   }
 </style>
+</head>
+<body>
 
-<div id="tag" class="task-list"></div>
-<button onclick="addTask('tag')">+ Aufgabe hinzufügen</button>
+<h2>Putzplan</h2>
 
+<div class="nav-tabs">
+  <button id="btn-frueh" class="active" onclick="showSection('frueh')">Frühdienst</button>
+  <button id="btn-tag" onclick="showSection('tag')">Tagdienst</button>
+  <button id="btn-spaet" onclick="showSection('spaet')">Spätdienst</button>
+</div>
+
+<div id="frueh" class="task-section">
+  <div class="task-list" id="frueh-list"></div>
+  <button class="add-task" onclick="addTask('frueh-list')">+ Aufgabe hinzufügen</button>
+</div>
+
+<div id="tag" class="task-section" style="display:none;">
+  <div class="task-list" id="tag-list"></div>
+  <button class="add-task" onclick="addTask('tag-list')">+ Aufgabe hinzufügen</button>
+</div>
+
+<div id="spaet" class="task-section" style="display:none;">
+  <div class="task-list" id="spaet-list"></div>
+  <button class="add-task" onclick="addTask('spaet-list')">+ Aufgabe hinzufügen</button>
+</div>
+
+<!-- Signatur Popup -->
 <div id="signaturePopup" class="signature-popup" style="display:none;">
-  <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
-  <br>
+  <canvas id="signatureCanvas" class="signature-canvas" width="320" height="160"></canvas><br />
   <button onclick="saveSignature()">Speichern</button>
   <button onclick="closeSignaturePopup()">Abbrechen</button>
 </div>
 
 <script>
+  // Navigation Tabs
+  function showSection(section) {
+    ['frueh','tag','spaet'].forEach(sec => {
+      document.getElementById(sec).style.display = sec === section ? 'block' : 'none';
+      document.getElementById('btn-' + sec).classList.toggle('active', sec === section);
+    });
+  }
+
+  // Aufgabenverwaltung
   let currentTaskId = null;
   let isDrawing = false;
   let lastX = 0;
   let lastY = 0;
+
   const canvas = document.getElementById('signatureCanvas');
   const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
 
-  function addTask(section) {
-    const taskList = document.getElementById(section);
+  function addTask(listId) {
+    const taskList = document.getElementById(listId);
     const taskId = 'task-' + Date.now();
+
+    // Standard-Aufgabenname (du kannst das anpassen oder per Prompt fragen)
+    const taskName = prompt('Aufgabenbeschreibung eingeben:', 'Neue Aufgabe');
+    if (!taskName) return;
 
     const taskDiv = document.createElement('div');
     taskDiv.classList.add('task');
     taskDiv.id = taskId;
-
-    // Beispiel-Aufgabenname
     taskDiv.innerHTML = `
-      Aufgabe ${taskList.children.length + 1}
+      ${taskName}
       <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${taskId}')">🖊️</span>
-      <div class="signature-image" style="margin-top:5px;"></div>
+      <div class="signature-image"></div>
     `;
 
     taskList.appendChild(taskDiv);
 
-    // Falls eine Unterschrift bereits gespeichert ist, anzeigen
     loadSignature(taskId);
+    saveTasksToStorage();
   }
 
+  // Signatur Popup öffnen
   function openSignaturePopup(taskId) {
     currentTaskId = taskId;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Lade ggf. vorhandene Signatur in Canvas
+    const dataURL = localStorage.getItem('signature_' + taskId);
+    if (dataURL) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = dataURL;
+    }
+
     document.getElementById('signaturePopup').style.display = 'block';
   }
-
   function closeSignaturePopup() {
     document.getElementById('signaturePopup').style.display = 'none';
     currentTaskId = null;
   }
 
-  // Zeichnen im Canvas (Touch & Mouse)
+  // Canvas Zeichnen
   canvas.addEventListener('mousedown', startDrawing);
   canvas.addEventListener('mousemove', draw);
   canvas.addEventListener('mouseup', stopDrawing);
   canvas.addEventListener('mouseout', stopDrawing);
 
-  canvas.addEventListener('touchstart', startDrawingTouch);
-  canvas.addEventListener('touchmove', drawTouch);
+  canvas.addEventListener('touchstart', startDrawingTouch, {passive:false});
+  canvas.addEventListener('touchmove', drawTouch, {passive:false});
   canvas.addEventListener('touchend', stopDrawing);
 
   function startDrawing(e) {
@@ -107,8 +225,7 @@
   function stopDrawing() {
     isDrawing = false;
   }
-
-  // Touch-Version
+  // Touch
   function getTouchPos(touchEvent) {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -135,32 +252,80 @@
     lastY = pos.y;
   }
 
+  // Signatur speichern
   function saveSignature() {
     if (!currentTaskId) return;
-
-    // Signatur als Bild speichern (Base64)
     const dataURL = canvas.toDataURL();
     localStorage.setItem('signature_' + currentTaskId, dataURL);
 
-    // Bild in der Aufgabe anzeigen
     loadSignature(currentTaskId);
-
     closeSignaturePopup();
   }
 
+  // Signatur in Aufgabe anzeigen
   function loadSignature(taskId) {
     const dataURL = localStorage.getItem('signature_' + taskId);
     if (dataURL) {
       const taskDiv = document.getElementById(taskId);
       if (taskDiv) {
-        let imgDiv = taskDiv.querySelector('.signature-image');
-        if (!imgDiv) {
-          imgDiv = document.createElement('div');
-          imgDiv.className = 'signature-image';
-          taskDiv.appendChild(imgDiv);
+        const imgDiv = taskDiv.querySelector('.signature-image');
+        if (imgDiv) {
+          imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" />`;
         }
-        imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;">`;
       }
     }
   }
+
+  // Aufgaben & Signaturen im localStorage speichern / laden
+  function saveTasksToStorage() {
+    const allTasks = {};
+    ['frueh-list','tag-list','spaet-list'].forEach(listId => {
+      const list = document.getElementById(listId);
+      const tasks = [];
+      list.querySelectorAll('.task').forEach(task => {
+        tasks.push({
+          id: task.id,
+          text: task.childNodes[0].textContent.trim()
+        });
+      });
+      allTasks[listId] = tasks;
+    });
+    localStorage.setItem('putzplan-tasks', JSON.stringify(allTasks));
+  }
+  function loadTasksFromStorage() {
+    const allTasks = JSON.parse(localStorage.getItem('putzplan-tasks'));
+    if (!allTasks) return;
+    Object.entries(allTasks).forEach(([listId, tasks]) => {
+      const list = document.getElementById(listId);
+      list.innerHTML = '';
+      tasks.forEach(t => {
+        const taskDiv = document.createElement('div');
+        taskDiv.classList.add('task');
+        taskDiv.id = t.id;
+        taskDiv.innerHTML = `
+          ${t.text}
+          <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${t.id}')">🖊️</span>
+          <div class="signature-image"></div>
+        `;
+        list.appendChild(taskDiv);
+        loadSignature(t.id);
+      });
+    });
+  }
+
+  // Beim Start die Aufgaben laden
+  window.onload = () => {
+    loadTasksFromStorage();
+  };
+
+  // Beim Aufgaben hinzufügen speichern
+  document.querySelectorAll('.add-task').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // kleiner Delay, damit addTask() fertig wird, dann speichern
+      setTimeout(() => saveTasksToStorage(), 200);
+    });
+  });
 </script>
+
+</body>
+</html>
