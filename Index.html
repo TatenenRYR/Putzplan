@@ -6,44 +6,59 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0fff0;
+      background-color: #e9f5e9;
       margin: 0;
-      padding: 20px;
-      color: #333;
+      padding: 0;
     }
-    h1, h2, h3 {
-      color: #2e8b57;
+    header {
+      background-color: #4caf50;
+      color: white;
+      padding: 10px;
+      text-align: center;
     }
-    .navigation, .admin-toggle {
+    .navigation {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+      padding: 10px;
+    }
+    .day-view {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
     }
     .day-container {
-      border: 2px solid #2e8b57;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
-      background-color: #ffffff;
-    }
-    .task-list {
-      margin-bottom: 10px;
-    }
-    .task {
-      margin-bottom: 10px;
-      padding: 5px;
+      background: white;
       border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       position: relative;
     }
-    .task input[type="text"] {
-      width: 70%;
+    .task {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      position: relative;
+    }
+    .sign-icon, .edit-icon, .delete-icon {
+      position: absolute;
+      top: 8px;
+      cursor: pointer;
     }
     .sign-icon {
-      position: absolute;
-      right: 5px;
-      top: 5px;
-      cursor: pointer;
+      right: 8px;
+    }
+    .edit-icon {
+      right: 30px;
+    }
+    .delete-icon {
+      right: 52px;
     }
     .signature-canvas {
       border: 1px solid #000;
@@ -62,26 +77,45 @@
     .signature-popup button {
       margin-top: 5px;
     }
+    .admin-toggle {
+      margin: 10px;
+      text-align: center;
+    }
+    .book-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>Putzplan</h1>  <div class="navigation">
+  <header>
+    <h1>Putzplan</h1>
+  </header>
+  <div class="navigation">
     <button onclick="prevDay()">◀</button>
-    <h2 id="currentDateDisplay"></h2>
+    <div id="dateDisplay"></div>
     <button onclick="nextDay()">▶</button>
-  </div>  <div class="admin-toggle">
-    <label><input type="checkbox" id="adminModeToggle" onchange="toggleAdminMode()"> Administrationsmodus</label>
-  </div>  <div id="dayContainer" class="day-container"></div>  <div id="signaturePopup" class="signature-popup" style="display:none;">
+  </div>
+  <div class="admin-toggle">
+    <button onclick="toggleAdmin()">Administration</button>
+  </div>
+  <div class="day-view">
+    <div class="day-container" id="taskContainer"></div>
+  </div>  <div id="signaturePopup" class="signature-popup" style="display:none;">
     <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
     <br>
     <button onclick="saveSignature()">Speichern</button>
     <button onclick="closeSignaturePopup()">Abbrechen</button>
   </div>  <script>
-    const dienstNamen = ['frueh', 'tag', 'spaet'];
     let currentDate = new Date();
+    let isAdmin = false;
     let currentTaskId = null;
     let isDrawing = false;
-    let lastX = 0, lastY = 0;
+    let lastX = 0;
+    let lastY = 0;
+
     const canvas = document.getElementById('signatureCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -89,124 +123,81 @@
       return date.toISOString().split('T')[0];
     }
 
-    function updateDisplay() {
-      document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString();
-      const container = document.getElementById('dayContainer');
+    function displayDate() {
+      document.getElementById('dateDisplay').textContent = formatDate(currentDate);
+    }
+
+    function loadTasks() {
+      const container = document.getElementById('taskContainer');
       container.innerHTML = '';
-
-      dienstNamen.forEach(dienst => {
-        const title = document.createElement('h3');
-        title.textContent = dienst.charAt(0).toUpperCase() + dienst.slice(1) + 'dienst';
-        container.appendChild(title);
-
-        const taskList = document.createElement('div');
-        taskList.className = 'task-list';
-        taskList.id = dienst;
-        container.appendChild(taskList);
-
+      const dateKey = formatDate(currentDate);
+      const tasks = JSON.parse(localStorage.getItem('tasks_' + dateKey)) || [];
+      tasks.forEach((task, index) => {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task';
+        taskDiv.id = dateKey + '_task_' + index;
+        taskDiv.innerHTML = `
+          <span class="task-text" contenteditable="${isAdmin}">${task.text}</span>
+          <div class="signature-image" style="margin-top:5px;"></div>
+          ${isAdmin ? `
+          <span class="edit-icon" onclick="editTask(${index})">✏️</span>
+          <span class="delete-icon" onclick="deleteTask(${index})">❌</span>
+          <span class="sign-icon" onclick="openSignaturePopup('${dateKey}_task_${index}')">🖊️</span>
+          ` : `
+          <span class="sign-icon" onclick="openSignaturePopup('${dateKey}_task_${index}')">🖊️</span>
+          `}
+        `;
+        container.appendChild(taskDiv);
+        loadSignature(dateKey + '_task_' + index);
+      });
+      if (isAdmin) {
         const addButton = document.createElement('button');
         addButton.textContent = '+ Aufgabe hinzufügen';
-        addButton.onclick = () => addTask(dienst);
+        addButton.onclick = () => addTask();
         container.appendChild(addButton);
-
-        loadTasks(dienst);
-      });
-    }
-
-    function addTask(section) {
-      const taskId = formatDate(currentDate) + '-' + section + '-' + Date.now();
-      const taskList = document.getElementById(section);
-
-      const taskDiv = document.createElement('div');
-      taskDiv.classList.add('task');
-      taskDiv.id = taskId;
-      const admin = document.getElementById('adminModeToggle').checked;
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = 'Neue Aufgabe';
-      input.disabled = !admin;
-
-      input.addEventListener('input', () => {
-        saveTaskText(taskId, input.value);
-      });
-
-      const sign = document.createElement('span');
-      sign.className = 'sign-icon';
-      sign.title = 'Unterschreiben';
-      sign.textContent = '🖊️';
-      sign.onclick = () => openSignaturePopup(taskId);
-
-      const signDiv = document.createElement('div');
-      signDiv.className = 'signature-image';
-      signDiv.style.marginTop = '5px';
-
-      taskDiv.appendChild(input);
-      taskDiv.appendChild(sign);
-      taskDiv.appendChild(signDiv);
-
-      taskList.appendChild(taskDiv);
-
-      saveTaskText(taskId, input.value);
-    }
-
-    function saveTaskText(taskId, text) {
-      localStorage.setItem('tasktext_' + taskId, text);
-    }
-
-    function loadTasks(section) {
-      const datePrefix = formatDate(currentDate) + '-' + section;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('tasktext_' + datePrefix)) {
-          const taskId = key.replace('tasktext_', '');
-          const taskList = document.getElementById(section);
-          if (!document.getElementById(taskId)) {
-            const taskDiv = document.createElement('div');
-            taskDiv.classList.add('task');
-            taskDiv.id = taskId;
-            const admin = document.getElementById('adminModeToggle').checked;
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = localStorage.getItem(key);
-            input.disabled = !admin;
-            input.addEventListener('input', () => {
-              saveTaskText(taskId, input.value);
-            });
-
-            const sign = document.createElement('span');
-            sign.className = 'sign-icon';
-            sign.title = 'Unterschreiben';
-            sign.textContent = '🖊️';
-            sign.onclick = () => openSignaturePopup(taskId);
-
-            const signDiv = document.createElement('div');
-            signDiv.className = 'signature-image';
-            signDiv.style.marginTop = '5px';
-
-            taskDiv.appendChild(input);
-            taskDiv.appendChild(sign);
-            taskDiv.appendChild(signDiv);
-            taskList.appendChild(taskDiv);
-            loadSignature(taskId);
-          }
-        }
       }
     }
 
-    function toggleAdminMode() {
-      updateDisplay();
+    function addTask() {
+      const dateKey = formatDate(currentDate);
+      const tasks = JSON.parse(localStorage.getItem('tasks_' + dateKey)) || [];
+      tasks.push({ text: 'Neue Aufgabe' });
+      localStorage.setItem('tasks_' + dateKey, JSON.stringify(tasks));
+      loadTasks();
+    }
+
+    function editTask(index) {
+      const dateKey = formatDate(currentDate);
+      const tasks = JSON.parse(localStorage.getItem('tasks_' + dateKey)) || [];
+      const taskDiv = document.getElementById(dateKey + '_task_' + index);
+      const newText = taskDiv.querySelector('.task-text').textContent;
+      tasks[index].text = newText;
+      localStorage.setItem('tasks_' + dateKey, JSON.stringify(tasks));
+    }
+
+    function deleteTask(index) {
+      const dateKey = formatDate(currentDate);
+      const tasks = JSON.parse(localStorage.getItem('tasks_' + dateKey)) || [];
+      tasks.splice(index, 1);
+      localStorage.setItem('tasks_' + dateKey, JSON.stringify(tasks));
+      loadTasks();
     }
 
     function prevDay() {
       currentDate.setDate(currentDate.getDate() - 1);
-      updateDisplay();
+      displayDate();
+      loadTasks();
     }
 
     function nextDay() {
       currentDate.setDate(currentDate.getDate() + 1);
-      updateDisplay();
+      displayDate();
+      loadTasks();
+    }
+
+    function toggleAdmin() {
+      isAdmin = !isAdmin;
+      loadTasks();
     }
 
     function openSignaturePopup(taskId) {
@@ -218,57 +209,6 @@
     function closeSignaturePopup() {
       document.getElementById('signaturePopup').style.display = 'none';
       currentTaskId = null;
-    }
-
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
-    canvas.addEventListener('touchstart', startDrawingTouch);
-    canvas.addEventListener('touchmove', drawTouch);
-    canvas.addEventListener('touchend', stopDrawing);
-
-    function startDrawing(e) {
-      isDrawing = true;
-      lastX = e.offsetX;
-      lastY = e.offsetY;
-    }
-    function draw(e) {
-      if (!isDrawing) return;
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.stroke();
-      lastX = e.offsetX;
-      lastY = e.offsetY;
-    }
-    function stopDrawing() {
-      isDrawing = false;
-    }
-    function getTouchPos(touchEvent) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: touchEvent.touches[0].clientX - rect.left,
-        y: touchEvent.touches[0].clientY - rect.top
-      };
-    }
-    function startDrawingTouch(e) {
-      e.preventDefault();
-      isDrawing = true;
-      const pos = getTouchPos(e);
-      lastX = pos.x;
-      lastY = pos.y;
-    }
-    function drawTouch(e) {
-      e.preventDefault();
-      if (!isDrawing) return;
-      const pos = getTouchPos(e);
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-      lastX = pos.x;
-      lastY = pos.y;
     }
 
     function saveSignature() {
@@ -283,13 +223,71 @@
       const dataURL = localStorage.getItem('signature_' + taskId);
       if (dataURL) {
         const taskDiv = document.getElementById(taskId);
-        if (taskDiv) {
-          const imgDiv = taskDiv.querySelector('.signature-image');
-          imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;">`;
-        }
+        const imgDiv = taskDiv.querySelector('.signature-image');
+        imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;">`;
       }
     }
 
-    updateDisplay();
+    // Canvas Events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawingTouch);
+    canvas.addEventListener('touchmove', drawTouch);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function startDrawing(e) {
+      isDrawing = true;
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    function getTouchPos(touchEvent) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: touchEvent.touches[0].clientX - rect.left,
+        y: touchEvent.touches[0].clientY - rect.top
+      };
+    }
+
+    function startDrawingTouch(e) {
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getTouchPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function drawTouch(e) {
+      e.preventDefault();
+      if (!isDrawing) return;
+      const pos = getTouchPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    // Initial setup
+    displayDate();
+    loadTasks();
   </script></body>
 </html>
