@@ -8,7 +8,7 @@
     h1 { text-align: center; }
     .day { background: white; margin-bottom: 1rem; padding: 1rem; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
     .day h2 { margin-top: 0; }
-    canvas { border: 1px solid #ccc; border-radius: 5px; display: block; margin-top: 5px; }
+    canvas { border: 1px solid #ccc; border-radius: 5px; display: block; margin-top: 5px; touch-action: none; }
     .controls { text-align: center; margin: 1rem 0; }
     .admin-link { text-align: center; margin-top: 2rem; }
     .hidden { display: none; }
@@ -55,8 +55,11 @@
     }
 
     function loadPlan(dateStr) {
-      const key = "plan_" + dateStr;
+      const key = "plan_0000-01-" + String(currentDate.getDate()).padStart(2, '0');
       const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const signKey = "signatures_" + dateStr;
+      const signs = JSON.parse(localStorage.getItem(signKey) || '{}');
+
       const content = document.getElementById("content");
       content.innerHTML = '';
 
@@ -69,13 +72,48 @@
 
       document.querySelectorAll("canvas").forEach(canvas => {
         const ctx = canvas.getContext("2d");
+        if (signs[canvas.dataset.typ]) {
+          const img = new Image();
+          img.onload = () => ctx.drawImage(img, 0, 0);
+          img.src = signs[canvas.dataset.typ];
+        }
+
         let drawing = false;
         ctx.strokeStyle = "#000";
 
-        canvas.addEventListener("mousedown", e => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
-        canvas.addEventListener("mousemove", e => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } });
-        canvas.addEventListener("mouseup", () => { drawing = false; saveSignatures(); });
-        canvas.addEventListener("mouseout", () => { drawing = false; });
+        function startDraw(e) {
+          drawing = true;
+          const rect = canvas.getBoundingClientRect();
+          const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+          const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          e.preventDefault();
+        }
+
+        function draw(e) {
+          if (!drawing) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+          const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          e.preventDefault();
+        }
+
+        function endDraw() {
+          drawing = false;
+          saveSignatures();
+        }
+
+        canvas.addEventListener("mousedown", startDraw);
+        canvas.addEventListener("mousemove", draw);
+        canvas.addEventListener("mouseup", endDraw);
+        canvas.addEventListener("mouseleave", endDraw);
+
+        canvas.addEventListener("touchstart", startDraw);
+        canvas.addEventListener("touchmove", draw);
+        canvas.addEventListener("touchend", endDraw);
       });
     }
 
