@@ -1,138 +1,170 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Putzplan mit Unterschriften & Admin</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background:#e8f5e9; color:#2e7d32; }
-    header { display:flex; gap:10px; align-items:center; justify-content:center; font-weight:bold; margin-bottom: 20px;}
-    #dateDisplay { font-size: 1.2em; }
-    button { background:#2e7d32; color:white; border:none; border-radius:4px; padding:6px 10px; cursor:pointer; }
-    button:disabled { background:#a5d6a7; cursor:not-allowed; }
-    .shifts { display:flex; gap: 20px; justify-content:center; flex-wrap: wrap; }
-    .shift {
-      background:#c8e6c9;
-      border-radius:8px;
-      padding:15px;
-      width: 300px;
-      box-shadow: 0 2px 5px rgb(46 125 50 / 0.3);
-      display: flex;
-      flex-direction: column;
-    }
-    .shift h2 {
-      text-align:center;
-      margin-top:0;
-      color:#1b5e20;
-    }
-    .task {
-      background:#a5d6a7;
-      padding:8px;
-      margin-bottom:8px;
-      border-radius:4px;
-      position:relative;
-      word-break: break-word;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 5px;
-    }
-    .task-text {
-      flex-grow: 1;
-    }
-    .task input.edit-input {
-      flex-grow: 1;
-      padding: 4px;
-      border-radius: 3px;
-      border: 1px solid #1b5e20;
-    }
-    .delete, .edit, .sign-icon {
-      cursor:pointer;
-      font-weight: bold;
-      color: #1b5e20;
-      user-select: none;
-      font-size: 18px;
-    }
-    .sign-icon {
-      margin-left: 5px;
-    }
-    .signature-img {
-      max-width: 100%;
-      max-height: 80px;
-      border: 1px solid #ccc;
-      margin-top: 5px;
-      border-radius: 4px;
-    }
-    #signaturePopup {
-      position: fixed;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      border: 1px solid #666;
-      padding: 10px;
-      z-index: 1000;
-      display: none;
-      box-shadow: 0 0 10px rgba(0,0,0,0.25);
-      border-radius: 8px;
-    }
-    #signaturePopup canvas {
-      border: 1px solid #000;
-      touch-action: none;
-      border-radius: 4px;
-      display: block;
-      margin-bottom: 10px;
-    }
-    #signaturePopup button {
-      margin-right: 10px;
-    }
-    #adminToggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #1b5e20;
-      font-weight: bold;
-      padding: 10px 15px;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #historyPopup {
-      position: fixed;
-      top: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      border: 1px solid #666;
-      padding: 15px;
-      max-height: 70vh;
-      overflow-y: auto;
-      width: 400px;
-      z-index: 1001;
-      display: none;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      border-radius: 8px;
-    }
-    #historyPopup h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      color: #1b5e20;
-    }
-    #historyPopup ul {
-      padding-left: 20px;
-      max-height: 55vh;
-      overflow-y: auto;
-    }
-    #historyPopup button.closeHistoryBtn {
-      margin-top: 10px;
-      background: #2e7d32;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Putzplan mit Unterschriften & Admin</title>
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 20px;
+    background:#e8f5e9;
+    color:#2e7d32;
+  }
+  header {
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    margin-bottom: 20px;
+  }
+  #dateDisplay {
+    font-size: 1.2em;
+    min-width: 220px;
+    text-align: center;
+  }
+  button {
+    background:#2e7d32;
+    color:white;
+    border:none;
+    border-radius:4px;
+    padding:6px 10px;
+    cursor:pointer;
+    user-select:none;
+  }
+  button:disabled {
+    background:#a5d6a7;
+    cursor:not-allowed;
+  }
+  .shifts {
+    display:flex;
+    gap: 20px;
+    justify-content:center;
+    flex-wrap: wrap;
+  }
+  .shift {
+    background:#c8e6c9;
+    border-radius:8px;
+    padding:15px;
+    width: 300px;
+    box-shadow: 0 2px 5px rgb(46 125 50 / 0.3);
+    display: flex;
+    flex-direction: column;
+  }
+  .shift h2 {
+    text-align:center;
+    margin-top:0;
+    color:#1b5e20;
+  }
+  .task {
+    background:#a5d6a7;
+    padding:8px;
+    margin-bottom:8px;
+    border-radius:4px;
+    position:relative;
+    word-break: break-word;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+  }
+  .task-text {
+    flex-grow: 1;
+  }
+  .task input.edit-input {
+    flex-grow: 1;
+    padding: 4px;
+    border-radius: 3px;
+    border: 1px solid #1b5e20;
+  }
+  .delete, .sign-icon, .history-icon, .edit {
+    cursor:pointer;
+    font-weight: bold;
+    color: #1b5e20;
+    user-select: none;
+    font-size: 18px;
+  }
+  .sign-icon, .history-icon {
+    margin-left: 5px;
+  }
+  .signature-img {
+    max-width: 100%;
+    max-height: 80px;
+    border: 1px solid #ccc;
+    margin-top: 5px;
+    border-radius: 4px;
+  }
+  #signaturePopup {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid #666;
+    padding: 10px;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 0 10px rgba(0,0,0,0.25);
+    border-radius: 8px;
+  }
+  #signaturePopup canvas {
+    border: 1px solid #000;
+    touch-action: none;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 10px;
+  }
+  #signaturePopup button {
+    margin-right: 10px;
+  }
+  #adminToggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #1b5e20;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  #historyPopup {
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid #666;
+    padding: 15px;
+    max-height: 70vh;
+    overflow-y: auto;
+    width: 400px;
+    z-index: 1001;
+    display: none;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    border-radius: 8px;
+  }
+  #historyPopup h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #1b5e20;
+  }
+  #historyPopup ul {
+    padding-left: 20px;
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+  #historyPopup button.closeHistoryBtn {
+    margin-top: 10px;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
 
@@ -181,7 +213,7 @@
 </div>
 
 <script>
-  // Globals
+  // --- Globals ---
   let currentDate = new Date();
   currentDate.setHours(0,0,0,0);
   let adminMode = false;
@@ -209,7 +241,7 @@
 
   const shifts = ['frueh', 'tag', 'spaet'];
 
-  // --- Storage keys helpers ---
+  // --- Storage key helpers ---
   function tasksKey(date, shift) {
     return `tasks_${date.toISOString().slice(0,10)}_${shift}`;
   }
@@ -222,7 +254,9 @@
 
   // --- Date Display ---
   function updateDateDisplay() {
-    dateDisplay.textContent = currentDate.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+    dateDisplay.textContent = currentDate.toLocaleDateString('de-DE', {
+      weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'
+    });
   }
 
   prevBtn.onclick = () => {
@@ -230,6 +264,7 @@
     updateDateDisplay();
     loadAllTasks();
   };
+
   nextBtn.onclick = () => {
     currentDate.setDate(currentDate.getDate() + 1);
     updateDateDisplay();
@@ -244,7 +279,7 @@
     loadAllTasks();
   };
 
-  // --- Load tasks and render ---
+  // --- Load tasks ---
   function loadAllTasks() {
     shifts.forEach(shift => {
       loadTasks(shift);
@@ -253,23 +288,25 @@
 
   function loadTasks(shift) {
     const container = document.querySelector(`#shift-${shift} .tasks`);
+    const addBtn = document.querySelector(`#shift-${shift} .addTaskBtn`);
     container.innerHTML = '';
 
-    const tasks = JSON.parse(localStorage.getItem(tasksKey(currentDate, shift)) || '[]');
-    const signatures = JSON.parse(localStorage.getItem(signaturesKey(currentDate, shift)) || '{}');
-
+    let tasks = JSON.parse(localStorage.getItem(tasksKey(currentDate, shift)) || '[]');
+    let signatures = JSON.parse(localStorage.getItem(signaturesKey(currentDate, shift)) || '{}');
+    // signatures: {index: base64}
+    
     tasks.forEach((taskText, index) => {
       const taskDiv = document.createElement('div');
       taskDiv.className = 'task';
 
-      if(adminMode){
-        // Bearbeitbar
+      if(adminMode) {
+        // Bearbeitbar - Textfeld
         const input = document.createElement('input');
         input.type = 'text';
         input.value = taskText;
         input.className = 'edit-input';
         input.onchange = () => {
-          tasks[index] = input.value.trim();
+          tasks[index] = input.value.trim() || "Neue Aufgabe";
           localStorage.setItem(tasksKey(currentDate, shift), JSON.stringify(tasks));
           loadTasks(shift);
         };
@@ -278,11 +315,10 @@
         // Löschen Button
         const delBtn = document.createElement('span');
         delBtn.className = 'delete';
-        delBtn.textContent = '×';
         delBtn.title = 'Aufgabe löschen';
+        delBtn.textContent = '×';
         delBtn.onclick = () => {
           tasks.splice(index, 1);
-          // Lösche auch zugehörige Signatur und History
           delete signatures[index];
           localStorage.setItem(tasksKey(currentDate, shift), JSON.stringify(tasks));
           localStorage.setItem(signaturesKey(currentDate, shift), JSON.stringify(signatures));
@@ -290,7 +326,7 @@
         };
         taskDiv.appendChild(delBtn);
 
-        // Signieren Button
+        // Unterschreiben Button
         const signBtn = document.createElement('span');
         signBtn.className = 'sign-icon';
         signBtn.title = 'Unterschreiben';
@@ -300,9 +336,8 @@
 
         // History Button
         const historyBtn = document.createElement('span');
-        historyBtn.className = 'sign-icon';
-        historyBtn.style.fontSize = '14px';
-        historyBtn.title = 'Unterschriften-Historie anzeigen';
+        historyBtn.className = 'history-icon';
+        historyBtn.title = 'Unterschriften-Historie';
         historyBtn.textContent = '📜';
         historyBtn.onclick = () => openHistory(shift, index);
         taskDiv.appendChild(historyBtn);
@@ -313,3 +348,14 @@
         textSpan.className = 'task-text';
         textSpan.textContent = taskText;
         taskDiv.appendChild(textSpan);
+
+        // Falls Signatur vorhanden anzeigen
+        if(signatures[index]) {
+          const img = document.createElement('img');
+          img.className = 'signature-img';
+          img.src = signatures[index].img;
+          img.title = `Unterschrieben von: ${signatures[index].name}\nAm: ${new Date(signatures[index].time).toLocaleString()}`;
+          taskDiv.appendChild(img);
+        }
+
+        // Unterschriftenfeld zum Signieren anzeigen (zum Beispiel anklickbar
