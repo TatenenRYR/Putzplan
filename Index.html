@@ -2,32 +2,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Putzplan Monatsansicht</title>
+  <title>Putzplan</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      background-color: #f0fff0;
+      margin: 0;
       padding: 20px;
+      color: #333;
     }
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin-bottom: 30px;
+    .navigation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }
-    .day {
-      border: 1px solid #ccc;
-      padding: 5px;
-      min-height: 80px;
-      cursor: pointer;
-    }
-    .day.active {
-      background-color: #def;
+    .task-list {
+      margin-bottom: 20px;
     }
     .task {
       margin-bottom: 10px;
       padding: 5px;
       border: 1px solid #ccc;
       position: relative;
+      background-color: #e0ffe0;
     }
     .sign-icon {
       position: absolute;
@@ -52,112 +50,128 @@
     .signature-popup button {
       margin-top: 5px;
     }
+    .admin-toggle {
+      margin-bottom: 20px;
+    }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>Putzplan für <span id="currentMonthYear"></span></h1>
-  <div class="calendar" id="calendar"></div>  <h2>Aufgaben für <span id="selectedDateDisplay"></span></h2>
-  <div id="tasks">
-    <h3>Frühdienst</h3>
-    <div id="frueh" class="task-list"></div>
-    <button onclick="addTask('frueh')">+ Aufgabe hinzufügen</button><h3>Tagdienst</h3>
-<div id="tag" class="task-list"></div>
-<button onclick="addTask('tag')">+ Aufgabe hinzufügen</button>
-
-<h3>Spätdienst</h3>
-<div id="spaet" class="task-list"></div>
-<button onclick="addTask('spaet')">+ Aufgabe hinzufügen</button>
-
-  </div>  <div id="signaturePopup" class="signature-popup" style="display:none;">
-    <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas><br>
+  <div class="navigation">
+    <button onclick="prevDay()">◀</button>
+    <div id="currentDate"></div>
+    <button onclick="nextDay()">▶</button>
+  </div>  <div class="admin-toggle">
+    <label>
+      <input type="checkbox" id="adminModeToggle" onchange="toggleAdminMode()"> Administration aktivieren
+    </label>
+  </div>  <div id="planContainer"></div>  <div id="signaturePopup" class="signature-popup" style="display:none;">
+    <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
+    <br>
     <button onclick="saveSignature()">Speichern</button>
     <button onclick="closeSignaturePopup()">Abbrechen</button>
   </div>  <script>
+    let currentDay = new Date().getDate();
+    const today = new Date();
     const canvas = document.getElementById('signatureCanvas');
     const ctx = canvas.getContext('2d');
-    let isDrawing = false;
-    let lastX = 0, lastY = 0;
     let currentTaskId = null;
-    let selectedDate = null;
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
 
-    function formatDateKey(date) {
-      return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
+    const dienstarten = ['frueh', 'tag', 'spaet'];
+
+    function updateView() {
+      const date = new Date(today.getFullYear(), today.getMonth(), currentDay);
+      document.getElementById('currentDate').innerText = date.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      const planContainer = document.getElementById('planContainer');
+      planContainer.innerHTML = '';
+
+      dienstarten.forEach(dienst => {
+        const title = document.createElement('h3');
+        title.textContent = dienst.charAt(0).toUpperCase() + dienst.slice(1) + 'dienst';
+        planContainer.appendChild(title);
+
+        const taskList = document.createElement('div');
+        taskList.id = `${dienst}-${currentDay}`;
+        taskList.className = 'task-list';
+        planContainer.appendChild(taskList);
+
+        if (document.getElementById('adminModeToggle').checked) {
+          const button = document.createElement('button');
+          button.textContent = '+ Aufgabe hinzufügen';
+          button.onclick = () => addTask(dienst);
+          planContainer.appendChild(button);
+        }
+
+        loadTasks(dienst);
+      });
     }
 
-    function generateCalendar() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+    function addTask(dienst) {
+      const taskList = document.getElementById(`${dienst}-${currentDay}`);
+      const taskId = `${dienst}-${currentDay}-${Date.now()}`;
 
-      document.getElementById('currentMonthYear').textContent = now.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
-
-      const calendar = document.getElementById('calendar');
-      calendar.innerHTML = '';
-
-      for (let i = 1; i <= daysInMonth; i++) {
-        const div = document.createElement('div');
-        div.className = 'day';
-        div.textContent = i;
-        div.onclick = () => selectDate(new Date(year, month, i));
-        calendar.appendChild(div);
-      }
-    }
-
-    function selectDate(date) {
-      selectedDate = date;
-      document.getElementById('selectedDateDisplay').textContent = date.toLocaleDateString('de-DE');
-      document.querySelectorAll('.day').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.day')[date.getDate() - 1].classList.add('active');
-      loadTasks();
-    }
-
-    function addTask(section) {
-      if (!selectedDate) return alert('Bitte zuerst einen Tag auswählen.');
-
-      const taskList = document.getElementById(section);
-      const taskId = `${formatDateKey(selectedDate)}_${section}_${Date.now()}`;
       const taskDiv = document.createElement('div');
       taskDiv.className = 'task';
       taskDiv.id = taskId;
-      taskDiv.innerHTML = `Neue Aufgabe
+      taskDiv.innerHTML = `
+        Aufgabe ${taskList.children.length + 1}
         <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${taskId}')">🖊️</span>
-        <div class="signature-image" style="margin-top:5px;"></div>`;
+        <div class="signature-image" style="margin-top:5px;"></div>
+      `;
+
       taskList.appendChild(taskDiv);
-      saveTasks();
+      saveTasks(dienst);
     }
 
-    function saveTasks() {
-      if (!selectedDate) return;
-      const sections = ['frueh', 'tag', 'spaet'];
-      const dayKey = formatDateKey(selectedDate);
-      const data = {};
-      sections.forEach(section => {
-        const divs = document.querySelectorAll(`#${section} .task`);
-        data[section] = Array.from(divs).map(div => div.id);
-      });
-      localStorage.setItem(`tasks_${dayKey}`, JSON.stringify(data));
+    function saveTasks(dienst) {
+      const taskList = document.getElementById(`${dienst}-${currentDay}`);
+      const tasks = [];
+      for (let child of taskList.children) {
+        tasks.push({ id: child.id });
+      }
+      localStorage.setItem(`tasks-${dienst}-${currentDay}`, JSON.stringify(tasks));
     }
 
-    function loadTasks() {
-      const sections = ['frueh', 'tag', 'spaet'];
-      const dayKey = formatDateKey(selectedDate);
-      const data = JSON.parse(localStorage.getItem(`tasks_${dayKey}`)) || {};
-
-      sections.forEach(section => {
-        const list = document.getElementById(section);
-        list.innerHTML = '';
-        (data[section] || []).forEach(id => {
-          const div = document.createElement('div');
-          div.className = 'task';
-          div.id = id;
-          div.innerHTML = `Aufgabe
-            <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${id}')">🖊️</span>
-            <div class="signature-image" style="margin-top:5px;"></div>`;
-          list.appendChild(div);
-          loadSignature(id);
+    function loadTasks(dienst) {
+      const taskList = document.getElementById(`${dienst}-${currentDay}`);
+      taskList.innerHTML = '';
+      const saved = localStorage.getItem(`tasks-${dienst}-${currentDay}`);
+      if (saved) {
+        const tasks = JSON.parse(saved);
+        tasks.forEach((task, index) => {
+          const taskDiv = document.createElement('div');
+          taskDiv.className = 'task';
+          taskDiv.id = task.id;
+          taskDiv.innerHTML = `
+            Aufgabe ${index + 1}
+            <span class="sign-icon" title="Unterschreiben" onclick="openSignaturePopup('${task.id}')">🖊️</span>
+            <div class="signature-image" style="margin-top:5px;"></div>
+          `;
+          taskList.appendChild(taskDiv);
+          loadSignature(task.id);
         });
-      });
+      }
+    }
+
+    function prevDay() {
+      currentDay = Math.max(1, currentDay - 1);
+      updateView();
+    }
+
+    function nextDay() {
+      const maxDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      currentDay = Math.min(maxDay, currentDay + 1);
+      updateView();
+    }
+
+    function toggleAdminMode() {
+      updateView();
     }
 
     function openSignaturePopup(taskId) {
@@ -171,62 +185,82 @@
       currentTaskId = null;
     }
 
-    canvas.addEventListener('mousedown', e => {
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawingTouch);
+    canvas.addEventListener('touchmove', drawTouch);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function startDrawing(e) {
       isDrawing = true;
-      [lastX, lastY] = [e.offsetX, e.offsetY];
-    });
-    canvas.addEventListener('mousemove', e => {
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    }
+    function draw(e) {
       if (!isDrawing) return;
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
       ctx.lineTo(e.offsetX, e.offsetY);
       ctx.stroke();
-      [lastX, lastY] = [e.offsetX, e.offsetY];
-    });
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    }
+    function stopDrawing() {
+      isDrawing = false;
+    }
 
-    canvas.addEventListener('touchstart', e => {
+    function getTouchPos(touchEvent) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: touchEvent.touches[0].clientX - rect.left,
+        y: touchEvent.touches[0].clientY - rect.top
+      };
+    }
+    function startDrawingTouch(e) {
       e.preventDefault();
       isDrawing = true;
-      const rect = canvas.getBoundingClientRect();
-      lastX = e.touches[0].clientX - rect.left;
-      lastY = e.touches[0].clientY - rect.top;
-    });
-    canvas.addEventListener('touchmove', e => {
+      const pos = getTouchPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+    function drawTouch(e) {
       e.preventDefault();
       if (!isDrawing) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.touches[0].clientX - rect.left;
-      const y = e.touches[0].clientY - rect.top;
+      const pos = getTouchPos(e);
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
+      ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
-      [lastX, lastY] = [x, y];
-    });
-    canvas.addEventListener('touchend', () => isDrawing = false);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
 
     function saveSignature() {
       if (!currentTaskId) return;
       const dataURL = canvas.toDataURL();
-      localStorage.setItem(`signature_${currentTaskId}`, dataURL);
+      localStorage.setItem('signature_' + currentTaskId, dataURL);
       loadSignature(currentTaskId);
       closeSignaturePopup();
     }
 
     function loadSignature(taskId) {
-      const dataURL = localStorage.getItem(`signature_${taskId}`);
+      const dataURL = localStorage.getItem('signature_' + taskId);
       if (dataURL) {
         const taskDiv = document.getElementById(taskId);
         if (taskDiv) {
           let imgDiv = taskDiv.querySelector('.signature-image');
+          if (!imgDiv) {
+            imgDiv = document.createElement('div');
+            imgDiv.className = 'signature-image';
+            taskDiv.appendChild(imgDiv);
+          }
           imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;">`;
         }
       }
     }
 
-    // Initialisieren
-    generateCalendar();
+    updateView();
   </script></body>
 </html>
