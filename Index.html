@@ -1,190 +1,233 @@
-<style>
-  body {
-    font-family: sans-serif;
-    background-color: #e6f4ea;
-    margin: 0;
-    padding: 0;
-  }
-  .container {
-    max-width: 1000px;
-    margin: auto;
-    padding: 20px;
-  }
-  .book-view {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    background: white;
-    box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    padding: 20px;
-    border-radius: 20px;
-    margin-top: 20px;
-  }
-  .day-column {
-    padding: 15px;
-    border-right: 2px solid #ccc;
-  }
-  .day-column:last-child {
-    border-right: none;
-  }
-  .task {
-    margin-bottom: 10px;
-    padding: 8px;
-    border: 1px solid #ccc;
-    position: relative;
-    background: #f6fff9;
-    border-radius: 5px;
-  }
-  .task textarea {
-    width: 100%;
-    resize: none;
-  }
-  .sign-icon {
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    cursor: pointer;
-  }
-  .signature-canvas {
-    border: 1px solid #000;
-    touch-action: none;
-  }
-  .signature-popup {
-    position: fixed;
-    top: 20%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    border: 1px solid #666;
-    padding: 10px;
-    z-index: 1000;
-  }
-  .signature-popup button {
-    margin-top: 5px;
-  }
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-  }
-  .header button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .admin-toggle {
-    margin-top: 20px;
-    text-align: right;
-  }
-  .admin-toggle button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-</style><div class="container">
-  <div class="header">
+<!DOCTYPE html><html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Putzplan</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background-color: #f0fdf4;
+    }
+    header {
+      background-color: #4ade80;
+      padding: 10px;
+      text-align: center;
+      font-size: 1.5rem;
+      color: white;
+    }
+    .navigation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background-color: #bbf7d0;
+    }
+    .book-view {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 20px;
+    }
+    .day-section {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .task-list {
+      margin-top: 10px;
+    }
+    .task {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #ecfdf5;
+    }
+    .sign-icon {
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .signature-image img {
+      max-width: 100%;
+      max-height: 80px;
+      border: 1px solid #ccc;
+    }
+    .signature-popup {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border: 1px solid #666;
+      padding: 10px;
+      z-index: 1000;
+    }
+    .signature-canvas {
+      width: 100%;
+      height: 150px;
+      border: 1px solid black;
+    }
+    .admin-only {
+      display: none;
+    }
+    .admin-mode .admin-only {
+      display: inline-block;
+    }
+    .admin-toggle {
+      background: #4ade80;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .date-display {
+      text-align: center;
+      font-size: 1.2rem;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>Putzplan</header>
+  <div class="navigation">
     <button onclick="prevDay()">◀</button>
-    <h2 id="dateDisplay">Datum</h2>
+    <div class="date-display" id="dateDisplay"></div>
     <button onclick="nextDay()">▶</button>
-  </div>  <div class="admin-toggle">
-    <button onclick="toggleAdmin()" id="adminBtn">Administration aktivieren</button>
-  </div>  <div class="book-view">
-    <div class="day-column">
-      <h3>Frühdienst</h3>
-      <div id="frueh"></div>
-      <div id="fruehControls"></div>
-    </div>
-    <div class="day-column">
-      <h3>Spätdienst</h3>
-      <div id="spaet"></div>
-      <div id="spaetControls"></div>
-    </div>
   </div>
-</div><div id="signaturePopup" class="signature-popup" style="display:none;">
-  <canvas id="signatureCanvas" class="signature-canvas" width="300" height="150"></canvas>
-  <br>
-  <button onclick="saveSignature()">Speichern</button>
-  <button onclick="closeSignaturePopup()">Abbrechen</button>
-</div><script>
-  let currentDayIndex = new Date().getDate() - 1;
-  let adminMode = false;
-  const canvas = document.getElementById('signatureCanvas');
-  const ctx = canvas.getContext('2d');
-  let isDrawing = false;
-  let lastX = 0;
-  let lastY = 0;
-  let currentTaskId = null;
+  <div class="navigation">
+    <button class="admin-toggle" onclick="toggleAdmin()">Administration</button>
+  </div>
+  <div class="book-view">
+    <div class="day-section">
+      <h3>Frühdienst</h3>
+      <div id="frueh" class="task-list"></div>
+      <button class="admin-only" onclick="addTask('frueh')">+ Aufgabe hinzufügen</button>
+    </div>
+    <div class="day-section">
+      <h3>Spätdienst</h3>
+      <div id="spaet" class="task-list"></div>
+      <button class="admin-only" onclick="addTask('spaet')">+ Aufgabe hinzufügen</button>
+    </div>
+  </div>  <div id="signaturePopup" class="signature-popup" style="display:none;">
+    <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+    <br>
+    <button onclick="saveSignature()">Speichern</button>
+    <button onclick="closeSignaturePopup()">Abbrechen</button>
+  </div>  <script>
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    let currentTaskId = null;
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
 
-  function updateDateDisplay() {
-    const today = new Date();
-    const displayDate = new Date(today.getFullYear(), today.getMonth(), currentDayIndex + 1);
-    document.getElementById('dateDisplay').innerText = displayDate.toLocaleDateString();
-  }
+    let currentDate = new Date();
 
-  function renderTasks() {
-    ['frueh', 'spaet'].forEach(type => {
-      const container = document.getElementById(type);
-      const controls = document.getElementById(type + 'Controls');
-      container.innerHTML = '';
-      controls.innerHTML = '';
-      const key = `${type}_day_${currentDayIndex}`;
-      const tasks = JSON.parse(localStorage.getItem(key) || '[]');
-
-      tasks.forEach((task, index) => {
-        const div = document.createElement('div');
-        div.className = 'task';
-        div.id = `${key}_task_${index}`;
-
-        if (adminMode) {
-          div.innerHTML = `<textarea onchange="saveTask('${key}', ${index}, this.value)">${task}</textarea>`;} else {
-      div.innerHTML = `${task}`;
+    function updateDateDisplay() {
+      document.getElementById('dateDisplay').innerText = currentDate.toLocaleDateString();
+      loadTasks();
     }
 
-    const signatureImgDiv = document.createElement('div');
-    signatureImgDiv.className = 'signature-image';
-    signatureImgDiv.innerHTML = loadSignature(div.id);
+    function prevDay() {
+      currentDate.setDate(currentDate.getDate() - 1);
+      updateDateDisplay();
+    }
 
-    div.innerHTML += `<span class="sign-icon" onclick="openSignaturePopup('${div.id}')">🖊️</span>`;
-    div.appendChild(signatureImgDiv);
-    container.appendChild(div);
-  });
+    function nextDay() {
+      currentDate.setDate(currentDate.getDate() + 1);
+      updateDateDisplay();
+    }
 
-  if (adminMode) {
-    const btn = document.createElement('button');
-    btn.textContent = '+ Aufgabe hinzufügen';
-    btn.onclick = () => addTask(type);
-    controls.appendChild(btn);
-  }
-});
+    function toggleAdmin() {
+      document.body.classList.toggle('admin-mode');
+    }
 
-}
+    function addTask(section) {
+      const id = `${section}_${currentDate.toDateString()}_${Date.now()}`;
+      const taskList = document.getElementById(section);
+      const div = document.createElement('div');
+      div.className = 'task';
+      div.id = id;
+      div.innerHTML = `
+        <span contenteditable="true">Neue Aufgabe</span>
+        <span class="sign-icon" onclick="openSignaturePopup('${id}')">🖊️</span>
+        <div class="signature-image"></div>
+      `;
+      taskList.appendChild(div);
+      saveTasks();
+    }
 
-function saveTask(key, index, value) { const tasks = JSON.parse(localStorage.getItem(key) || '[]'); tasks[index] = value; localStorage.setItem(key, JSON.stringify(tasks)); }
+    function openSignaturePopup(id) {
+      currentTaskId = id;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('signaturePopup').style.display = 'block';
+    }
 
-function addTask(type) { const key = ${type}_day_${currentDayIndex}; const tasks = JSON.parse(localStorage.getItem(key) || '[]'); tasks.push(''); localStorage.setItem(key, JSON.stringify(tasks)); renderTasks(); }
+    function closeSignaturePopup() {
+      document.getElementById('signaturePopup').style.display = 'none';
+    }
 
-function toggleAdmin() { adminMode = !adminMode; document.getElementById('adminBtn').innerText = adminMode ? 'Administration deaktivieren' : 'Administration aktivieren'; renderTasks(); }
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    });
 
-function prevDay() { currentDayIndex = (currentDayIndex - 1 + 31) % 31; updateDateDisplay(); renderTasks(); }
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    });
 
-function nextDay() { currentDayIndex = (currentDayIndex + 1) % 31; updateDateDisplay(); renderTasks(); }
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
 
-function openSignaturePopup(taskId) { currentTaskId = taskId; ctx.clearRect(0, 0, canvas.width, canvas.height); document.getElementById('signaturePopup').style.display = 'block'; }
+    function saveSignature() {
+      const dataURL = canvas.toDataURL();
+      localStorage.setItem('sig_' + currentTaskId, dataURL);
+      const imgDiv = document.querySelector('#' + currentTaskId + ' .signature-image');
+      imgDiv.innerHTML = `<img src="${dataURL}" alt="Unterschrift">`;
+      closeSignaturePopup();
+    }
 
-function closeSignaturePopup() { document.getElementById('signaturePopup').style.display = 'none'; currentTaskId = null; }
+    function saveTasks() {
+      ['frueh', 'spaet'].forEach(section => {
+        const tasks = Array.from(document.getElementById(section).children).map(div => div.innerHTML);
+        localStorage.setItem(`${section}_${currentDate.toDateString()}`, JSON.stringify(tasks));
+      });
+    }
 
-canvas.addEventListener('mousedown', e => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; }); canvas.addEventListener('mousemove', e => { if (!isDrawing) return; ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY]; }); canvas.addEventListener('mouseup', () => isDrawing = false); canvas.addEventListener('mouseout', () => isDrawing = false);
+    function loadTasks() {
+      ['frueh', 'spaet'].forEach(section => {
+        const taskList = document.getElementById(section);
+        taskList.innerHTML = '';
+        const saved = localStorage.getItem(`${section}_${currentDate.toDateString()}`);
+        if (saved) {
+          const tasks = JSON.parse(saved);
+          tasks.forEach((html, index) => {
+            const div = document.createElement('div');
+            div.className = 'task';
+            div.id = `${section}_${currentDate.toDateString()}_${index}`;
+            div.innerHTML = html;
+            taskList.appendChild(div);
+          });
+        }
+      });
+    }
 
-function saveSignature() { if (!currentTaskId) return; const dataURL = canvas.toDataURL(); localStorage.setItem('signature_' + currentTaskId, dataURL); renderTasks(); closeSignaturePopup(); }
-
-function loadSignature(taskId) { const dataURL = localStorage.getItem('signature_' + taskId); return dataURL ? <img src="${dataURL}" alt="Unterschrift" style="max-width:100%; max-height:80px; border:1px solid #ccc;"> : ''; }
-
-updateDateDisplay(); renderTasks(); </script>
-
+    window.addEventListener('beforeunload', saveTasks);
+    window.addEventListener('DOMContentLoaded', () => {
+      updateDateDisplay();
+    });
+  </script></body>
+</html>
